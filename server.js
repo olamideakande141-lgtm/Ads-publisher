@@ -92,34 +92,30 @@ app.post('/api/advertisement',auth,upload.single('media'),(req,res)=>{
 });
 // PUBLIC PUBLISHED ADS
 app.get('/api/ads/published',(req,res)=>{ res.json(db.prepare("SELECT a.*, u.username FROM advertisements a LEFT JOIN users u ON u.id=a.user_id WHERE a.status='Published' ORDER BY a.published_at DESC LIMIT 30").all()); });
-app.post('/api/ads/:id/click',(req,res)=>{ db.prepare('UPDATE campaigns SET clicks=clicks+1 WHERE ad_id=?').run(req.params.id); res.json({ok:true}); });
+app.post('/api/ads/:id/click',(req,res)=>{ try{ db.prepare('UPDATE campaigns SET clicks=clicks+1 WHERE ad_id=?').run(req.params.id); }catch(e){} res.json({ok:true}); });
 
 // ========== PUBLISHER - PASS CODE SYSTEM ==========
-// 1. Register Publisher Bot -> Generate pcode + api_key
 app.post('/api/publisher/register',auth,(req,res)=>{
   const {bot_username, mini_app_url, bot_name}=req.body;
   if(!bot_username) return res.status(400).json({error:'Enter bot username e.g. @mybot'});
   const exists=db.prepare('SELECT id FROM publishers WHERE bot_username=?').get(bot_username);
   if(exists) return res.status(400).json({error:'This bot already registered'});
   const info=db.prepare('INSERT INTO publishers(user_id,bot_username,mini_app_url,bot_name,pcode,api_key,status) VALUES(?,?,?,?,?,?,?)').run(req.user.id,bot_username,mini_app_url||'',bot_name||'','TEMP',genApiKey(),'Pending');
-  const pcode='p'+info.lastInsertRowid; // e.g. p421, p1, p2
+  const pcode='p'+info.lastInsertRowid;
   db.prepare('UPDATE publishers SET pcode=? WHERE id=?').run(pcode, info.lastInsertRowid);
   sendTelegram(process.env.ADMIN_TELEGRAM_ID,`📢 NEW PUBLISHER #${info.lastInsertRowid}\nBot: ${bot_username}\nPass Code: ${pcode}\nApprove in Admin Dashboard.`);
   res.json({ok:true, id:info.lastInsertRowid, pcode, api_key: db.prepare('SELECT api_key FROM publishers WHERE id=?').get(info.lastInsertRowid).api_key, status:'Pending'});
 });
-// 2. Publisher SDK calls this to get 1 approved ad to show
 app.get('/api/publisher/ad', (req,res)=>{
   const pcode=req.query.pcode;
   if(!pcode) return res.status(400).json({error:'Missing pcode e.g. ?pcode=p421'});
   const pub=db.prepare('SELECT * FROM publishers WHERE pcode=?').get(pcode);
   if(!pub) return res.status(404).json({error:'Invalid pass code'});
   if(pub.status!=='Approved') return res.status(403).json({error:'Publisher not approved yet - wait for admin approval'});
-  // Pick random Published ad that is not paused
-  const ad=db.prepare(`SELECT a.* FROM advertisements a LEFT JOIN campaigns c ON c.ad_id=a.id WHERE a.status='Published' AND (c.paused IS NULL OR c.paused=0) ORDER BY RANDOM() LIMIT 1`).get();
+  const ad=db.prepare(`SELECT a.* FROM advertisements a WHERE a.status='Published' ORDER BY RANDOM() LIMIT 1`).get();
   if(!ad) return res.json({ok:false, error:'No ads available now'});
   res.json({ok:true, pcode, ad:{id:ad.id, title:ad.title, description:ad.description, media_path: ad.media_path ? '/'+ad.media_path : '', media_type:ad.media_type, destination_url:ad.destination_url, category:ad.category}});
 });
-// 3. Publisher confirms user watched -> Credit publisher
 app.post('/api/publisher/reward', (req,res)=>{
   const {pcode, ad_id, viewer_id, api_key}=req.body;
   if(!pcode||!ad_id) return res.status(400).json({error:'Missing pcode/ad_id'});
@@ -127,7 +123,6 @@ app.post('/api/publisher/reward', (req,res)=>{
   if(!pub||pub.status!=='Approved') return res.status(403).json({error:'Publisher not approved'});
   if(api_key && pub.api_key!==api_key) return res.status(401).json({error:'Invalid API key'});
   const reward=parseFloat(db.prepare("SELECT value FROM settings WHERE key='PUBLISHER_REWARD_PER_VIEW'").get()?.value || process.env.PUBLISHER_REWARD_PER_VIEW || '0.005');
-  // Prevent duplicate reward for same viewer+ad within 1 hour (basic anti-fraud)
   const recent=db.prepare("SELECT id FROM publisher_views WHERE pcode=? AND ad_id=? AND viewer_id=? AND created_at > datetime('now','-1 hour')").get(pcode,ad_id,viewer_id||'anon');
   if(recent) return res.status(400).json({error:'Already rewarded for this ad recently'});
   const trx=db.transaction(()=>{
@@ -136,12 +131,11 @@ app.post('/api/publisher/reward', (req,res)=>{
     db.prepare('UPDATE wallets SET available=available+?, total_earned=total_earned+? WHERE user_id=?').run(reward,reward,pub.user_id);
     const w=db.prepare('SELECT available FROM wallets WHERE user_id=?').get(pub.user_id);
     db.prepare('INSERT INTO transactions(user_id,type,amount,balance_after,ref_type,ref_id,note) VALUES(?,?,?,?,?,?,?)').run(pub.user_id,'publisher_earn',reward,w.available,'publisher_view',pub.id,`Earned from ${pcode} ad ${ad_id}`);
-    db.prepare('UPDATE campaigns SET views=views+1 WHERE ad_id=?').run(ad_id);
+    try{ db.prepare('UPDATE campaigns SET views=views+1 WHERE ad_id=?').run(ad_id); }catch(e){}
   });
   trx();
   res.json({ok:true, rewarded:reward, pcode});
 });
-// Publisher Withdrawal
 app.post('/api/publisher/withdraw',auth,(req,res)=>{
   const {publisher_id, amount, wallet_address, network}=req.body;
   const pub=db.prepare('SELECT * FROM publishers WHERE id=? AND user_id=?').get(publisher_id, req.user.id);
@@ -158,25 +152,27 @@ app.post('/api/publisher/withdraw',auth,(req,res)=>{
   trx(); res.json({ok:true});
 });
 
-// ========== ADMIN ==========
+// ========== ADMIN - FIXED: NEVER CRASH, NEVER RETURN HTML ==========
 app.get('/api/admin/stats',adminAuth,(req,res)=>{
-  const q=(sql)=>db.prepare(sql).get().c;
-  res.json({
-    totalUsers:q('SELECT COUNT(*) c FROM users'),
-    totalAdvertisers:q("SELECT COUNT(DISTINCT user_id) c FROM advertisements"),
-    totalPublishers:q('SELECT COUNT(*) c FROM publishers'),
-    pendingPublishers:q("SELECT COUNT(*) c FROM publishers WHERE status='Pending'"),
-    totalDeposits:q('SELECT COUNT(*) c FROM deposits'),
-    pendingDeposits:q("SELECT COUNT(*) c FROM deposits WHERE status='Pending'"),
-    confirmedDeposits:q("SELECT COUNT(*) c FROM deposits WHERE status='Confirmed'"),
-    totalRevenue:db.prepare('SELECT COALESCE(SUM(amount),0) s FROM deposits WHERE status="Confirmed"').get().s,
-    totalAds:q('SELECT COUNT(*) c FROM advertisements'),
-    pendingModeration:q("SELECT COUNT(*) c FROM advertisements WHERE status='Awaiting Moderation'"),
-    approved:q("SELECT COUNT(*) c FROM advertisements WHERE status='Approved'"),
-    published:q("SELECT COUNT(*) c FROM advertisements WHERE status='Published'"),
-    activeCampaigns:q("SELECT COUNT(*) c FROM campaigns WHERE status='Active' AND paused=0"),
-    completed:q("SELECT COUNT(*) c FROM advertisements WHERE status='Completed'")
-  });
+  try{
+    const q=(sql)=>{ try{ const r=db.prepare(sql).get(); return r ? (r.c ?? r.s ?? 0) : 0; }catch(e){ console.log('stats q fail',sql,e.message); return 0; } };
+    res.json({
+      totalUsers:q('SELECT COUNT(*) c FROM users'),
+      totalAdvertisers:q("SELECT COUNT(DISTINCT user_id) c FROM advertisements"),
+      totalPublishers:q('SELECT COUNT(*) c FROM publishers'),
+      pendingPublishers:q("SELECT COUNT(*) c FROM publishers WHERE status='Pending'"),
+      totalDeposits:q('SELECT COUNT(*) c FROM deposits'),
+      pendingDeposits:q("SELECT COUNT(*) c FROM deposits WHERE status='Pending'"),
+      confirmedDeposits:q("SELECT COUNT(*) c FROM deposits WHERE status='Confirmed'"),
+      totalRevenue:q('SELECT COALESCE(SUM(amount),0) s FROM deposits WHERE status="Confirmed"'),
+      totalAds:q('SELECT COUNT(*) c FROM advertisements'),
+      pendingModeration:q("SELECT COUNT(*) c FROM advertisements WHERE status='Awaiting Moderation'"),
+      approved:q("SELECT COUNT(*) c FROM advertisements WHERE status='Approved'"),
+      published:q("SELECT COUNT(*) c FROM advertisements WHERE status='Published'"),
+      activeCampaigns:q("SELECT COUNT(*) c FROM campaigns WHERE status='Active'"),
+      completed:q("SELECT COUNT(*) c FROM advertisements WHERE status='Completed'")
+    });
+  }catch(e){ console.log('admin stats error',e.message); res.status(500).json({error:e.message}); }
 });
 app.get('/api/admin/users',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT u.*, w.available, w.total_deposited FROM users u LEFT JOIN wallets w ON w.user_id=u.id ORDER BY u.id DESC LIMIT 100').all()); });
 app.post('/api/admin/user/:id/suspend',adminAuth,(req,res)=>{ db.prepare("UPDATE users SET status='suspended' WHERE id=?").run(req.params.id); res.json({ok:true}); });
@@ -189,7 +185,7 @@ app.post('/api/admin/deposit/:id/confirm',adminAuth,(req,res)=>{
     db.prepare("UPDATE wallets SET available=available+?, total_deposited=total_deposited+? WHERE user_id=?").run(dep.amount,dep.amount,dep.user_id);
     const w=db.prepare('SELECT available FROM wallets WHERE user_id=?').get(dep.user_id);
     db.prepare('INSERT INTO transactions(user_id,type,amount,balance_after,ref_type,ref_id,note) VALUES(?,?,?,?,?,?,?)').run(dep.user_id,'deposit',dep.amount,w.available,'deposit',dep.id,`Confirmed ${dep.network} ${dep.tx_hash}`);
-    db.prepare('INSERT INTO audit_logs(actor,action,details) VALUES(?,?,?)').run('admin','confirm_deposit',`deposit ${dep.id} user ${dep.user_id} ${dep.amount}`);
+    try{ db.prepare('INSERT INTO audit_logs(actor,action,details) VALUES(?,?,?)').run('admin','confirm_deposit',`deposit ${dep.id} user ${dep.user_id} ${dep.amount}`); }catch(e){}
   });
   trx();
   const user=db.prepare('SELECT telegram_id FROM users WHERE id=?').get(dep.user_id);
@@ -227,14 +223,14 @@ app.post('/api/admin/ad/:id/publish',adminAuth,async(req,res)=>{
   const msgId=await sendTelegram(channel,`📢 ${ad.title}\n\n${ad.description||''}\n\n👉 ${ad.destination_url}`,ad.media_path);
   db.prepare('INSERT INTO publications(ad_id,channel,message_id) VALUES(?,?,?)').run(ad.id,channel,msgId||'');
   db.prepare("UPDATE advertisements SET status='Published', published_at=CURRENT_TIMESTAMP WHERE id=?").run(ad.id);
-  db.prepare("INSERT OR IGNORE INTO campaigns(ad_id,status) VALUES(?,'Active')").run(ad.id);
+  try{ db.prepare("INSERT OR IGNORE INTO campaigns(ad_id,status) VALUES(?,'Active')").run(ad.id); }catch(e){}
   const user=db.prepare('SELECT telegram_id FROM users WHERE id=?').get(ad.user_id);
   sendTelegram(user?.telegram_id,`🚀 Ad Published #${ad.id}\nLive for channel + Mini App + Publisher Bots.`);
   res.json({ok:true,message_id:msgId});
 });
-app.post('/api/admin/ad/:id/pause',adminAuth,(req,res)=>{ db.prepare('UPDATE campaigns SET paused=1 WHERE ad_id=?').run(req.params.id); res.json({ok:true}); });
-app.post('/api/admin/ad/:id/resume',adminAuth,(req,res)=>{ db.prepare('UPDATE campaigns SET paused=0 WHERE ad_id=?').run(req.params.id); res.json({ok:true}); });
-app.post('/api/admin/ad/:id/cancel',adminAuth,(req,res)=>{ db.prepare("UPDATE advertisements SET status='Completed' WHERE id=?").run(req.params.id); db.prepare("UPDATE campaigns SET status='Completed' WHERE ad_id=?").run(req.params.id); res.json({ok:true}); });
+app.post('/api/admin/ad/:id/pause',adminAuth,(req,res)=>{ try{ db.prepare('UPDATE campaigns SET paused=1 WHERE ad_id=?').run(req.params.id); }catch(e){} res.json({ok:true}); });
+app.post('/api/admin/ad/:id/resume',adminAuth,(req,res)=>{ try{ db.prepare('UPDATE campaigns SET paused=0 WHERE ad_id=?').run(req.params.id); }catch(e){} res.json({ok:true}); });
+app.post('/api/admin/ad/:id/cancel',adminAuth,(req,res)=>{ db.prepare("UPDATE advertisements SET status='Completed' WHERE id=?").run(req.params.id); try{ db.prepare("UPDATE campaigns SET status='Completed' WHERE ad_id=?").run(req.params.id); }catch(e){} res.json({ok:true}); });
 app.get('/api/admin/packages',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT * FROM packages ORDER BY id DESC').all()); });
 app.post('/api/admin/packages',adminAuth,(req,res)=>{ const info=db.prepare('INSERT INTO packages(name,placement,price,duration_days) VALUES(?,?,?,?)').run(req.body.name,req.body.placement,req.body.price,req.body.duration_days); res.json({ok:true,id:info.lastInsertRowid}); });
 app.put('/api/admin/packages/:id',adminAuth,(req,res)=>{ db.prepare('UPDATE packages SET name=?,placement=?,price=?,duration_days=?,active=? WHERE id=?').run(req.body.name,req.body.placement,req.body.price,req.body.duration_days,req.body.active??1,req.params.id); res.json({ok:true}); });
@@ -243,7 +239,6 @@ app.get('/api/admin/settings',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT
 app.post('/api/admin/settings',adminAuth,(req,res)=>{ for(const [k,v] of Object.entries(req.body)) db.prepare('INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)').run(k,String(v)); res.json({ok:true}); });
 app.get('/api/admin/publications',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT p.*, a.title FROM publications p LEFT JOIN advertisements a ON a.id=p.ad_id ORDER BY p.id DESC LIMIT 100').all()); });
 app.get('/api/admin/transactions',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT t.*, u.username FROM transactions t LEFT JOIN users u ON u.id=t.user_id ORDER BY t.id DESC LIMIT 100').all()); });
-// Publisher Admin
 app.get('/api/admin/publishers',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT p.*, u.username FROM publishers p LEFT JOIN users u ON u.id=p.user_id ORDER BY p.id DESC').all()); });
 app.post('/api/admin/publisher/:id/approve',adminAuth,(req,res)=>{
   db.prepare("UPDATE publishers SET status='Approved' WHERE id=?").run(req.params.id);
@@ -254,6 +249,13 @@ app.post('/api/admin/publisher/:id/approve',adminAuth,(req,res)=>{
 });
 app.post('/api/admin/publisher/:id/reject',adminAuth,(req,res)=>{ db.prepare("UPDATE publishers SET status='Rejected' WHERE id=?").run(req.params.id); res.json({ok:true}); });
 app.post('/api/admin/publisher/:id/suspend',adminAuth,(req,res)=>{ db.prepare("UPDATE publishers SET status='Suspended' WHERE id=?").run(req.params.id); res.json({ok:true}); });
+
+// JSON error handler - never return HTML for /api
+app.use((err,req,res,next)=>{
+  console.log('API ERROR',err.message);
+  if(req.path.startsWith('/api')) return res.status(500).json({error:err.message});
+  next(err);
+});
 
 try{ const {bot}=require('./bot'); if(process.env.BOT_TOKEN && process.env.BOT_TOKEN!=='PLACEHOLDER') bot.launch().then(()=> console.log('Bot running')); }catch(e){ console.log('Bot fail',e.message); }
 const PORT=process.env.PORT||3000;

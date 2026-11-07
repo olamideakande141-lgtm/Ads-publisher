@@ -39,6 +39,7 @@ bot.command('balance', (ctx)=>{
 bot.command('campaigns', (ctx)=> ctx.reply('📊 See campaigns in Mini App > CAMPAIGNS', webAppBtn()));
 bot.command('withdraw', (ctx)=> ctx.reply('Publisher withdrawal: Go to Mini App > PUBLISHER > Withdraw. Advertiser withdrawal: Contact /support'));
 bot.command('support', (ctx)=> ctx.reply(`🆘 Support: ${process.env.SUPPORT_USERNAME||'@support'}`));
-bot.command('help', (ctx)=> ctx.reply('Commands:\n/start\n/home\n/advertise\n/deposit\n/balance\n/campaigns\n/withdraw\n/support\n/help'));
+bot.command('admin', (ctx)=> ctx.reply('🛡️ Admin Panel', Markup.inlineKeyboard([[Markup.button.webApp('🛡️ Open ADMIN PANEL', 'https://ads-publisher.onrender.com/admin.html')]])));
+bot.command('help', (ctx)=> ctx.reply('Commands:\n/start\n/home\n/advertise\n/deposit\n/balance\n/campaigns\n/withdraw\n/support\n/admin\n/help'));
 if(require.main===module){ bot.launch().then(()=> console.log('Bot running')); }
 module.exports = { bot, sendTelegram, ensureUser };

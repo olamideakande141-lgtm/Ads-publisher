@@ -1,0 +1,16 @@
+{
+  "name": "ads-publisher",
+  "version": "2.0.0",
+  "description": "ADS PUBLISHER - Complete Telegram Advertising Platform + Publisher Network",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "telegraf": "^4.16.3"
+  },
+  "engines": { "node": "20.x" }
+}

@@ -14,7 +14,7 @@ async function sendTelegram(chatId, text, mediaPath){
     const m = await bot.telegram.sendMessage(chatId, text); return String(m.message_id);
   }catch(e){ console.log('Telegram send fail', e.message); return null; }
 }
-const webAppBtn = ()=> Markup.inlineKeyboard([[Markup.button.webApp('🚀 Open ADS PUBLISHER', process.env.MINI_APP_URL || 'https://example.com')]]);
+const webAppBtn = ()=> Markup.inlineKeyboard([[Markup.button.webApp('🚀 Open ADS PUBLISHER', process.env.MINI_APP_URL || 'https://ads-publisher.onrender.com')]]);
 function ensureUser(from){
   let u = db.prepare('SELECT * FROM users WHERE telegram_id=?').get(String(from.id));
   if(!u){

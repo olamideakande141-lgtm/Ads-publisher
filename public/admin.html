@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADS PUBLISHER - Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+body{font-family:Arial;background:#0f172a;color:#fff;margin:0;padding:16px}
+h1{font-size:20px}
+.card{background:#1e293b;padding:14px;border-radius:12px;margin-bottom:12px}
+button{background:#22c55e;border:0;padding:10px 14px;border-radius:8px;color:#fff;font-weight:700;width:100%;margin-top:8px}
+button.danger{background:#ef4444}
+input,select{width:100%;padding:10px;border-radius:8px;border:0;margin-top:8px;background:#0f172a;color:#fff}
+.tab{display:flex;gap:8px;margin:12px 0}
+.tab button{background:#334155}
+.tab button.active{background:#22c55e}
+.item{background:#0f172a;padding:10px;border-radius:8px;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>🛡️ ADS PUBLISHER ADMIN</h1>
+<div class="card">
+<b>Admin Pass Code</b>
+<input id="code" placeholder="Enter admin code e.g. ADMIN123" />
+<button onclick="loadAll()">Load Dashboard</button>
+</div>
+
+<div class="tab">
+<button class="active" onclick="show('campaigns')">Campaigns</button>
+<button onclick="show('deposits')">Deposits</button>
+<button onclick="show('withdraws')">Withdraws</button>
+</div>
+
+<div id="campaigns" class="card"><h3>📢 Campaigns / Ads</h3><div id="campList">Enter code to load...</div></div>
+<div id="deposits" class="card" style="display:none"><h3>💰 Deposits</h3><div id="depList">Enter code to load...</div></div>
+<div id="withdraws" class="card" style="display:none"><h3>💸 Withdrawals</h3><div id="withList">Enter code to load...</div></div>
+
+<script>
+const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+function show(id){
+  ['campaigns','deposits','withdraws'].forEach(x=> document.getElementById(x).style.display = x===id?'block':'none');
+  document.querySelectorAll('.tab button').forEach(b=> b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+async function loadAll(){
+  const code = document.getElementById('code').value.trim();
+  if(!code) return alert('Enter admin code');
+  localStorage.setItem('admin_code', code);
+  try{
+    const r = await fetch('/api/admin/overview?code='+encodeURIComponent(code));
+    const d = await r.json();
+    document.getElementById('campList').innerHTML = (d.campaigns||[]).map(c=>`
+      <div class="item"><b>${c.title||'Ad #'+c.id}</b><br>Budget: ${c.budget||0} USDT | Status: ${c.status||'pending'}<br>
+      <button onclick="act('campaign',${c.id},'approve')">✅ Approve</button>
+      <button class="danger" onclick="act('campaign',${c.id},'reject')">❌ Reject</button></div>`).join('') || 'No campaigns';
+    document.getElementById('depList').innerHTML = (d.deposits||[]).map(x=>`
+      <div class="item">User ${x.user_id} - ${x.amount} USDT - ${x.status}<br><button onclick="act('deposit',${x.id},'approve')">✅ Confirm</button></div>`).join('') || 'No deposits';
+    document.getElementById('withList').innerHTML = (d.withdrawals||[]).map(x=>`
+      <div class="item">User ${x.user_id} - ${x.amount} USDT - ${x.status}<br><button onclick="act('withdraw',${x.id},'approve')">✅ Pay</button>
+      <button class="danger" onclick="act('withdraw',${x.id},'reject')">❌ Reject</button></div>`).join('') || 'No withdrawals';
+  }catch(e){ alert('Cannot load admin data. Check server.js /api/admin/overview'); }
+}
+async function act(type,id,action){
+  const code = localStorage.getItem('admin_code');
+  const r = await fetch('/api/admin/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code,type,id,action})});
+  const d = await r.json();
+  alert(d.message||'Done');
+  loadAll();
+}
+const saved = localStorage.getItem('admin_code');
+if(saved){ document.getElementById('code').value = saved; loadAll(); }
+</script>
+</body>
+</html>

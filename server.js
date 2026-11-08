@@ -8,6 +8,14 @@ const DB = require('./database');
 const { User, Wallet, Deposit, Transaction, Advertisement, Campaign, Publication, Package, Setting, Publisher, PublisherView, PublisherClick, PublisherWithdrawal, nextId } = DB;
 const { sendTelegram } = require('./bot');
 const app = express();
+// ===== CORS FIX - ALLOW PAYOUT TO FETCH =====
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Telegram-InitData, X-Telegram-User');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
@@ -84,6 +92,7 @@ app.get('/api/settings-public', async(req,res)=>{
 });
 app.get('/ads.js',(req,res)=>{
   res.setHeader('Content-Type','application/javascript');
+  res.setHeader('Access-Control-Allow-Origin','*');
   res.send(`
 (function(){
   var PCODE = document.currentScript ? document.currentScript.dataset.pcode : 'p1';

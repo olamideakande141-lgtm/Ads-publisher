@@ -6,148 +6,67 @@
 <title>ADS PUBLISHER - Admin</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-*{box-sizing:border-box}
-body{font-family:Inter,Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:16px;padding-bottom:30px}
-h1{font-size:20px;margin:0 0 4px}
-.muted{font-size:12px;opacity:.7}
+*{box-sizing:border-box} body{font-family:Inter,Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:16px;padding-bottom:30px}
+h1{font-size:20px;margin:0 0 4px} .muted{font-size:12px;opacity:.7}
 .card{background:#1e293b;padding:14px;border-radius:14px;margin-bottom:12px}
 button{background:#22c55e;border:0;padding:11px 14px;border-radius:10px;color:#fff;font-weight:800;width:100%;margin-top:8px;cursor:pointer}
-button.small{width:auto;padding:7px 11px;margin:6px 6px 0 0;font-size:13px}
-button.danger{background:#ef4444}
-button.blue{background:#3b82f6}
-button.gray{background:#475569}
-button.orange{background:#f59e0b}
-input{width:100%;padding:11px;border-radius:10px;border:0;margin-top:8px;background:#0f172a;color:#fff;box-sizing:border-box}
-.tab{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
-.tab button{background:#334155;width:auto;padding:9px 13px;margin:0}
-.tab button.active{background:#22c55e}
+button.small{width:auto;padding:7px 11px;margin:6px 6px 0 0;font-size:13px} button.danger{background:#ef4444} button.blue{background:#3b82f6} button.gray{background:#475569} button.orange{background:#f59e0b}
+input{width:100%;padding:11px;border-radius:10px;border:0;margin-top:8px;background:#0f172a;color:#fff}
+.tab{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap} .tab button{background:#334155;width:auto;padding:9px 13px;margin:0} .tab button.active{background:#22c55e}
 .item{background:#0f172a;padding:12px;border-radius:10px;margin-top:8px;font-size:14px;line-height:1.5}
-.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.stat div{background:#0f172a;padding:12px;border-radius:10px;text-align:center}
-.stat b{font-size:18px;display:block}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px} .stat div{background:#0f172a;padding:12px;border-radius:10px;text-align:center} .stat b{font-size:18px;display:block}
 .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800}
 .b-pending{background:#fef3c7;color:#92400e}.b-ok{background:#dcfce7;color:#166534}.b-red{background:#fee2e2;color:#991b1b}.b-blue{background:#dbeafe;color:#1e40af}
 code{background:#0f172a;padding:2px 6px;border-radius:6px;font-size:12px}
 </style>
 </head>
 <body>
-<h1>🛡️ ADS PUBLISHER ADMIN</h1>
-<p class="muted">Approve Ads • Deposits • Publishers • Withdrawals</p>
-
-<div id="loginBox" class="card">
-<b>Admin Login</b>
-<input id="username" placeholder="ADMIN_USERNAME" />
-<input id="password" type="password" placeholder="ADMIN_PASSWORD" />
-<button onclick="login()">Login</button>
-<button class="gray" onclick="clearAll()">Clear Saved Session</button>
-<p style="font-size:12px;opacity:.7">If you see session error, click Clear Saved Session then login again.</p>
-</div>
-
+<h1>🛡️ ADS PUBLISHER ADMIN</h1><p class="muted">Approve Ads • Deposits • Publishers • Withdrawals</p>
+<div id="loginBox" class="card"><b>Admin Login</b><input id="username" placeholder="ADMIN_USERNAME" /><input id="password" type="password" placeholder="ADMIN_PASSWORD" /><button onclick="login()">Login</button><button class="gray" onclick="clearAll()">Clear Saved Session</button></div>
 <div id="dash" style="display:none">
 <div class="card"><div class="stat" id="stats"></div><button onclick="loadAll()">🔄 Refresh</button><button class="gray" onclick="logout()">Logout</button></div>
-
-<div class="tab">
-<button class="active" onclick="showTab('ads',this)">📢 Ads</button>
-<button onclick="showTab('deposits',this)">💰 Deposits</button>
-<button onclick="showTab('publishers',this)">🤖 Publishers</button>
-<button onclick="showTab('withdrawals',this)">🏧 Withdrawals</button>
-<button onclick="showTab('packages',this)">📦 Packages</button>
-</div>
-
+<div class="tab"><button class="active" onclick="showTab('ads',this)">📢 Ads</button><button onclick="showTab('deposits',this)">💰 Deposits</button><button onclick="showTab('publishers',this)">🤖 Publishers</button><button onclick="showTab('withdrawals',this)">🏧 Withdrawals</button><button onclick="showTab('packages',this)">📦 Packages</button></div>
 <div id="tab-ads" class="card"><h3 style="margin:0">📢 Ads — Moderation</h3><p class="muted">Approve → Publish. Reject → auto refund.</p><div id="adsList"></div></div>
 <div id="tab-deposits" class="card" style="display:none"><h3 style="margin:0">💰 Deposits</h3><div id="depList"></div></div>
-<div id="tab-publishers" class="card" style="display:none"><h3 style="margin:0">🤖 Publishers — Earn Per View</h3><p class="muted">Approve publisher → e go see bot code + API Key for him Mini App. Stats: Impressions / Clicks / Earned.</p><div id="pubList"></div></div>
-<div id="tab-withdrawals" class="card" style="display:none"><h3 style="margin:0">🏧 Withdrawals — Min 10 USDT • Fee 10%</h3><p class="muted">Approve → then click Paid after you send money. Reject → auto refund full amount.</p><div id="wdList"></div></div>
-<div id="tab-packages" class="card" style="display:none"><h3 style="margin:0">📦 Packages</h3><p class="muted">Price wey user go see for Advertise page.</p><input id="pkgName" placeholder="Package name e.g. Starter"><input id="pkgPlacement" placeholder="Placement e.g. Publisher Bots"><input id="pkgPrice" type="number" placeholder="Price e.g. 10"><input id="pkgDays" type="number" placeholder="Duration days e.g. 7"><button onclick="addPkg()">+ Add Package</button><div id="pkgList"></div></div>
+<div id="tab-publishers" class="card" style="display:none"><h3 style="margin:0">🤖 Publishers</h3><div id="pubList"></div></div>
+<div id="tab-withdrawals" class="card" style="display:none"><h3 style="margin:0">🏧 Withdrawals — Min 10 USDT • Fee 10%</h3><div id="wdList"></div></div>
+<div id="tab-packages" class="card" style="display:none"><h3 style="margin:0">📦 Packages</h3><input id="pkgName" placeholder="Package name"><input id="pkgPlacement" placeholder="Placement"><input id="pkgPrice" type="number" placeholder="Price"><input id="pkgDays" type="number" placeholder="Duration days"><button onclick="addPkg()">+ Add Package</button><div id="pkgList"></div></div>
 </div>
-
 <script>
 const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 let token = localStorage.getItem('admin_token') || '';
 function headers(){ return {'Authorization':'Bearer '+token, 'Content-Type':'application/json'} }
-function showTab(id,btn){
-  ['ads','deposits','publishers','withdrawals','packages'].forEach(x=> document.getElementById('tab-'+x).style.display = x===id?'block':'none');
-  document.querySelectorAll('.tab button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-}
+function showTab(id,btn){ ['ads','deposits','publishers','withdrawals','packages'].forEach(x=> document.getElementById('tab-'+x).style.display = x===id?'block':'none'); document.querySelectorAll('.tab button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
 function logout(){ localStorage.removeItem('admin_token'); token=''; document.getElementById('loginBox').style.display='block'; document.getElementById('dash').style.display='none'; }
 function clearAll(){ localStorage.removeItem('admin_token'); token=''; alert('Cleared. Now login again.'); logout(); }
-async function safeJson(res){
-  const txt = await res.text();
-  try{ return JSON.parse(txt); }catch{ throw new Error('Server returned HTML - old file cached. Redeploy + Clear session. Got: '+txt.slice(0,80)); }
-}
+async function safeJson(res){ const txt = await res.text(); try{ return JSON.parse(txt); }catch{ throw new Error('Server returned HTML - redeploy'); } }
 async function login(){
-  const username=document.getElementById('username').value.trim();
-  const password=document.getElementById('password').value;
+  const username=document.getElementById('username').value.trim(); const password=document.getElementById('password').value;
   const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
   const d=await safeJson(r).catch(e=>{ alert(e.message); return {}; });
   if(!d.token) return alert(d.error||'Wrong login');
   token=d.token; localStorage.setItem('admin_token',token);
-  document.getElementById('loginBox').style.display='none';
-  document.getElementById('dash').style.display='block';
-  loadAll();
+  document.getElementById('loginBox').style.display='none'; document.getElementById('dash').style.display='block'; loadAll();
 }
-function badge(st){
-  if(st==='Approved' || st==='Paid' || st==='Confirmed') return '<span class="badge b-ok">'+st+'</span>';
-  if(st==='Rejected') return '<span class="badge b-red">'+st+'</span>';
-  if(st==='Published') return '<span class="badge b-blue">Published</span>';
-  return '<span class="badge b-pending">'+(st||'Pending')+'</span>';
-}
+function badge(st){ if(st==='Approved' || st==='Paid' || st==='Confirmed') return '<span class="badge b-ok">'+st+'</span>'; if(st==='Rejected') return '<span class="badge b-red">'+st+'</span>'; if(st==='Published') return '<span class="badge b-blue">Published</span>'; return '<span class="badge b-pending">'+(st||'Pending')+'</span>'; }
 async function loadAll(){
   try{
-    const s=await safeJson(await fetch('/api/admin/stats',{headers:headers()}));
-    if(s.error) throw new Error(s.error);
-    document.getElementById('stats').innerHTML=`
-      <div><b>${s.totalUsers||0}</b>Users</div><div><b>${s.totalAds||0}</b>Ads</div>
-      <div><b>${s.pendingModeration||0}</b>Pending Ads</div><div><b>${s.pendingDeposits||0}</b>Pending Deposits</div>
-      <div><b>${s.pendingPublishers||0}</b>Pending Publishers</div><div><b>${s.pendingWithdrawals||0}</b>Pending Withdrawals</div>
-      <div><b>$${s.totalRevenue||0}</b>Revenue</div><div><b>${s.published||0}</b>Published</div>`;
-
+    const s=await safeJson(await fetch('/api/admin/stats',{headers:headers()})); if(s.error) throw new Error(s.error);
+    document.getElementById('stats').innerHTML=`<div><b>${s.totalUsers||0}</b>Users</div><div><b>${s.totalAds||0}</b>Ads</div><div><b>${s.pendingModeration||0}</b>Pending Ads</div><div><b>${s.pendingDeposits||0}</b>Pending Deposits</div><div><b>${s.pendingPublishers||0}</b>Pending Publishers</div><div><b>${s.pendingWithdrawals||0}</b>Pending Withdrawals</div><div><b>$${s.totalRevenue||0}</b>Revenue</div><div><b>${s.published||0}</b>Published</div>`;
     const ads=await safeJson(await fetch('/api/admin/ads',{headers:headers()}));
-    document.getElementById('adsList').innerHTML=ads.map(a=>`
-      <div class="item"><b>#${a.id} ${a.title}</b> - @${a.username||''}<br>$${a.price} | ${badge(a.status)} | ${a.placement||''} • ${a.category||''}<br><span class="muted">${a.destination_url||''}</span><br>
-      <button class="small" onclick="adAction(${a.id},'approve')">✅ Approve</button>
-      <button class="small blue" onclick="adAction(${a.id},'publish')">🚀 Publish</button>
-      <button class="small danger" onclick="adAction(${a.id},'reject')">❌ Reject + Refund</button></div>`).join('')||'No ads';
-
+    document.getElementById('adsList').innerHTML=ads.map(a=>`<div class="item"><b>#${a.id} ${a.title}</b> - @${a.username||''}<br>$${a.price} | ${badge(a.status)} | ${a.placement||''} • ${a.category||''}<br><span class="muted">${a.destination_url||''}</span><br><button class="small" onclick="adAction(${a.id},'approve')">✅ Approve</button><button class="small blue" onclick="adAction(${a.id},'publish')">🚀 Publish</button><button class="small danger" onclick="adAction(${a.id},'reject')">❌ Reject + Refund</button></div>`).join('')||'No ads';
     const deps=await safeJson(await fetch('/api/admin/deposits',{headers:headers()}));
-    document.getElementById('depList').innerHTML=deps.map(d=>`
-      <div class="item"><b>#${d.id} ${d.amount} USDT ${d.network}</b> - @${d.username||''}<br>${badge(d.status)} | TX: <code>${d.tx_hash||''}</code><br>
-      ${d.status==='Pending'?`<button class="small" onclick="depAction(${d.id},'confirm')">✅ Confirm</button><button class="small danger" onclick="depAction(${d.id},'reject')">❌ Reject</button>`:''}</div>`).join('')||'No deposits';
-
+    document.getElementById('depList').innerHTML=deps.map(d=>`<div class="item"><b>#${d.id} ${d.amount} USDT ${d.network}</b> - @${d.username||''}<br>${badge(d.status)} | TX: <code>${d.tx_hash||''}</code><br>${d.status==='Pending'?`<button class="small" onclick="depAction(${d.id},'confirm')">✅ Confirm</button><button class="small danger" onclick="depAction(${d.id},'reject')">❌ Reject</button>`:''}</div>`).join('')||'No deposits';
     const pubs=await safeJson(await fetch('/api/admin/publishers',{headers:headers()}));
-    document.getElementById('pubList').innerHTML=pubs.map(p=>{
-      const views = Number(p.total_views||0), clicks = Number(p.total_clicks||0), earned = Number(p.total_earned||0);
-      const ctr = views>0 ? ((clicks/views)*100).toFixed(1) : '0.0';
-      return `<div class="item"><b>${p.bot_username}</b> - @${p.username||''} - ${badge(p.status)}<br>
-      Pass Code: <code>${p.pcode}</code> • API Key: <code>${p.api_key||''}</code><br>
-      📊 <b>Impressions:</b> ${views} • <b>Clicks:</b> ${clicks} • <b>CTR:</b> ${ctr}% • <b>Earned:</b> $${earned.toFixed(2)}<br>
-      ${p.status==='Pending'?`<button class="small" onclick="pubAction(${p.id},'approve')">✅ Approve — Show Code to Bot Owner</button><button class="small danger" onclick="pubAction(${p.id},'reject')">❌ Reject</button>`:''}
-      ${p.status==='Approved'?`<button class="small orange" onclick="pubAction(${p.id},'suspend')">⏸️ Suspend</button>`:''}
-      </div>`;
-    }).join('')||'No publishers';
-
-    // WITHDRAWALS
-    let wds=[];
-    try{ wds = await safeJson(await fetch('/api/admin/withdrawals',{headers:headers()})); }catch(e){ wds=[]; }
-    document.getElementById('wdList').innerHTML = wds.length ? wds.map(w=>{
-      const amt=Number(w.amount||0), fee=Number(w.fee!==undefined?w.fee:amt*0.10), net=Number(w.net_amount!==undefined?w.net_amount:amt-fee);
-      return `<div class="item"><b>#${w.id} $${amt} ${w.network||'TRC20'}</b> - @${w.username||''} • Bot: ${w.bot_username||''}<br>${badge(w.status)} • Fee $${fee.toFixed(2)} • <b>Send $${net.toFixed(2)}</b><br><span class="muted">Wallet: <code>${w.wallet_address||''}</code></span><br>
-      ${w.status==='Pending'?`<button class="small" onclick="wdAction(${w.id},'approve')">✅ Approve</button><button class="small danger" onclick="wdAction(${w.id},'reject')">❌ Reject + Refund</button>`:''}
-      ${w.status==='Approved'?`<button class="small blue" onclick="wdAction(${w.id},'paid')">💰 Mark as Paid — I Don Send</button>`:''}
-      </div>`;
-    }).join('') : 'No withdrawals yet';
-
-    // PACKAGES
-    try{
-      const pkgs = await safeJson(await fetch('/api/admin/packages',{headers:headers()}));
-      document.getElementById('pkgList').innerHTML = pkgs.map(p=>`<div class="item"><b>${p.name}</b> — $${p.price} • ${p.placement} • ${p.duration_days} days • ${p.active?'Active':'Inactive'}<br><button class="small danger" onclick="delPkg(${p.id})">Delete</button></div>`).join('')||'No packages';
-    }catch(e){ document.getElementById('pkgList').innerHTML='Packages endpoint not ready'; }
-
+    document.getElementById('pubList').innerHTML=pubs.map(p=>{ const views=Number(p.total_views||0), clicks=Number(p.total_clicks||0), earned=Number(p.total_earned||0); const ctr=views>0?((clicks/views)*100).toFixed(1):'0.0'; return `<div class="item"><b>${p.bot_username}</b> - @${p.username||''} - ${badge(p.status)}<br>Pass: <code>${p.pcode}</code> • API: <code>${p.api_key||''}</code><br>📊 Impressions: ${views} • Clicks: ${clicks} • CTR: ${ctr}% • Earned: $${earned.toFixed(2)}<br>${p.status==='Pending'?`<button class="small" onclick="pubAction(${p.id},'approve')">✅ Approve</button><button class="small danger" onclick="pubAction(${p.id},'reject')">❌ Reject</button>`:''}${p.status==='Approved'?`<button class="small orange" onclick="pubAction(${p.id},'suspend')">⏸️ Suspend</button>`:''}</div>`; }).join('')||'No publishers';
+    let wds=[]; try{ wds = await safeJson(await fetch('/api/admin/withdrawals',{headers:headers()})); }catch(e){ wds=[]; }
+    document.getElementById('wdList').innerHTML = wds.length ? wds.map(w=>{ const amt=Number(w.amount||0), fee=Number(w.fee!==undefined?w.fee:amt*0.10), net=Number(w.net_amount!==undefined?w.net_amount:amt-fee); return `<div class="item"><b>#${w.id} $${amt} ${w.network||'TRC20'}</b> - @${w.username||''} • Bot: ${w.bot_username||''}<br>${badge(w.status)} • Fee $${fee.toFixed(2)} • <b>Send $${net.toFixed(2)}</b><br><span class="muted">Wallet: <code>${w.wallet_address||''}</code></span><br>${w.status==='Pending'?`<button class="small" onclick="wdAction(${w.id},'approve')">✅ Approve</button><button class="small danger" onclick="wdAction(${w.id},'reject')">❌ Reject + Refund</button>`:''}${w.status==='Approved'?`<button class="small blue" onclick="wdAction(${w.id},'paid')">💰 Mark as Paid</button>`:''}</div>`; }).join('') : 'No withdrawals yet';
+    try{ const pkgs = await safeJson(await fetch('/api/admin/packages',{headers:headers()})); document.getElementById('pkgList').innerHTML = pkgs.map(p=>`<div class="item"><b>${p.name}</b> — $${p.price} • ${p.placement} • ${p.duration_days} days • ${p.active?'Active':'Inactive'}<br><button class="small danger" onclick="delPkg(${p.id})">Delete</button></div>`).join('')||'No packages'; }catch(e){ document.getElementById('pkgList').innerHTML='Packages endpoint not ready'; }
   }catch(e){ alert('Login fail: '+e.message); logout(); }
 }
 async function adAction(id,action){ const r=await fetch(`/api/admin/ad/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({note:''})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
 async function depAction(id,action){ const r=await fetch(`/api/admin/deposit/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({note:''})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
-async function pubAction(id,action){ const r=await fetch(`/api/admin/publisher/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({})}); const d=await safeJson(r); alert(d.ok?'Done — Publisher go see bot code now':(d.error||'Failed')); loadAll(); }
+async function pubAction(id,action){ const r=await fetch(`/api/admin/publisher/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
 async function wdAction(id,action){ const r=await fetch(`/api/admin/withdrawal/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
 async function addPkg(){ const body={name:document.getElementById('pkgName').value, placement:document.getElementById('pkgPlacement').value, price:document.getElementById('pkgPrice').value, duration_days:document.getElementById('pkgDays').value}; const r=await fetch('/api/admin/packages',{method:'POST',headers:headers(),body:JSON.stringify(body)}); alert((await safeJson(r)).ok?'Package added':'Failed'); loadAll(); }
 async function delPkg(id){ if(!confirm('Delete package?')) return; const r=await fetch('/api/admin/packages/'+id,{method:'DELETE',headers:headers()}); alert((await safeJson(r)).ok?'Deleted':'Failed'); loadAll(); }

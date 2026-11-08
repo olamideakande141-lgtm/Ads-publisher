@@ -94,11 +94,22 @@ const PublisherWithdrawal = mongoose.model('PublisherWithdrawal', new mongoose.S
   status:{type:String, default:'Pending'}, created_at:{type:Date, default:Date.now}
 }));
 
-// Seed packages + settings
+// Seed packages + settings - FIXED: wait for Mongo, retry if fail
 async function seed(){
   try{
-    await new Promise(r=> setTimeout(r, 2000));
+    // Wait for Mongo to connect - up to 30 seconds
+    for(let i=0;i<15;i++){
+      if(mongoose.connection.readyState===1) break;
+      console.log('Waiting for Mongo... try '+(i+1));
+      await new Promise(r=> setTimeout(r, 2000));
+    }
+    if(mongoose.connection.readyState!==1){
+      console.log('Seed skipped - Mongo not connected yet, will retry in 10s');
+      setTimeout(seed, 10000);
+      return;
+    }
     const count = await Package.countDocuments();
+    console.log('Package count:', count);
     if(count===0){
       const pkgs = [
         {name:'Channel Post 1 Day', placement:'Channel', price:10, duration_days:1},
@@ -109,13 +120,18 @@ async function seed(){
         {name:'Business Promo 7 Days', placement:'Channel', price:60, duration_days:7},
       ];
       for(const p of pkgs){ p.id = await nextId('packages'); await Package.create(p); }
-      console.log('Seeded packages');
+      console.log('Seeded packages ✅ 6 packages');
     }
     const defaults = {USDT_TRC20:'', USDT_ERC20:'', TRC20_ENABLED:'1', ERC20_ENABLED:'1', SUPPORT_USERNAME:'@support', PUBLISHER_REWARD_PER_VIEW:'0.005', REFUND_POLICY:'Full refund on rejection'};
     for(const [k,v] of Object.entries(defaults)){
       await Setting.updateOne({key:k}, {$setOnInsert:{key:k, value:v}}, {upsert:true});
     }
-  }catch(e){ console.log('seed fail', e.message); }
+    console.log('Seed done ✅');
+  }catch(e){ 
+    console.log('seed fail', e.message); 
+    // Retry once after 10s if it failed
+    setTimeout(seed, 10000);
+  }
 }
 seed();
 

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watch Ad & Earn</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://ads-publisher.onrender.com/ads.js" data-pcode="p1" data-api-key="AP-2118E216F03D"></script>
+<style>
+body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:16px}
+.card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-size:15px;cursor:pointer}
+button:active{opacity:0.85}
+#adBox img,#adBox video{width:100%;border-radius:12px}
+h2{margin:0 0 8px 0;font-size:18px}
+p{margin:0;color:#475569;font-size:14px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="card" style="text-align:center"><h2>🎁 Watch Ad & Earn $0.005</h2><p>Ads from ADS PUBLISHER pool go show here automatically when Admin publishes.</p></div>
+<div class="card"><button onclick="showAd()">▶️ Show Ad Now</button></div>
+<div id="adBox" class="card" style="display:none"></div>
+<div id="status" class="card" style="display:none"></div>
+<script>
+const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+const PCODE = "p1";
+const API_KEY = "AP-2118E216F03D";
+const BASE = "https://ads-publisher.onrender.com";
+async function showAd(){
+  try{
+    const res = await fetch(`${BASE}/api/publisher/ads?pcode=${PCODE}&api_key=${API_KEY}`);
+    const data = await res.json();
+    const ads = Array.isArray(data) ? data : (data.ads || data.items || []);
+    if(!ads.length){ alert("No ads available now"); return; }
+    const ad = ads[0];
+    const box = document.getElementById("adBox");
+    box.style.display = "block";
+    let media = "";
+    if(ad.media_url || ad.media_path){
+      const raw = ad.media_url || ad.media_path;
+      const url = raw.startsWith("http") ? raw : BASE + raw;
+      media = (ad.media_type && ad.media_type.includes("video")) ? `<video src="${url}" controls autoplay></video>` : `<img src="${url}">`;
+    }
+    box.innerHTML = `${media}<h3 style="margin:12px 0 6px">${ad.title || "Sponsored"}</h3><p>${ad.description || ""}</p><br><a href="${ad.destination_url || "#"}" target="_blank"><button type="button">👉 Visit Advertiser</button></a>`;
+    const viewer_id = String(tg.initDataUnsafe?.user?.id || "anon");
+    const rewardRes = await fetch(`${BASE}/api/publisher/view`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ pcode: PCODE, api_key: API_KEY, ad_id: ad.id, viewer_id: viewer_id, request_id: "req_"+Date.now() })
+    });
+    const reward = await rewardRes.json();
+    const st = document.getElementById("status");
+    st.style.display = "block";
+    st.innerHTML = reward.ok ? `✅ You earned $${reward.rewarded} for this view!` : `Ad shown, reward: ${reward.error || ""}`;
+  }catch(e){ alert("Fetch fail: "+e.message); }
+}
+</script>
+</body>
+</html>

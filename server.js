@@ -37,7 +37,7 @@ function verifyInitData(initData){
 function auth(req,res,next){
   let u=null;
   if(req.headers['x-telegram-initdata']) u=verifyInitData(req.headers['x-telegram-initdata']);
-  if(!u && req.headers['x-telegram-user']){ try{ u=JSON.parse(req.headers['x-telegram-user']); }catch{} }
+  if(!u && req.headers['x-telegram-user']){ try{ let raw=req.headers['x-telegram-user']; try{ raw=decodeURIComponent(raw); }catch{} u=JSON.parse(raw); }catch{} }
   if(!u) return res.status(401).json({error:'Open via Telegram Mini App'});
   let user = db.prepare('SELECT * FROM users WHERE telegram_id=?').get(String(u.id));
   if(!user){ const info=db.prepare('INSERT INTO users(telegram_id,username,first_name,photo_url) VALUES(?,?,?,?)').run(String(u.id),u.username||'',u.first_name||'',u.photo_url||''); db.prepare('INSERT INTO wallets(user_id) VALUES(?)').run(info.lastInsertRowid); user=db.prepare('SELECT * FROM users WHERE id=?').get(info.lastInsertRowid); }

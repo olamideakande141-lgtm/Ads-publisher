@@ -178,7 +178,8 @@ function showPage(p){
   const nav=document.getElementById(map[p]); if(nav) nav.classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function hdrs(){ return {'Content-Type':'application/json','x-telegram-initdata':tg.initData||'','x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})} }
+function hdrs(){ return {'Content-Type':'application/json','x-telegram-initdata':tg.initData||''}; }
+function fdHdrs(){ return {'x-telegram-initdata':tg.initData||''}; }
 function updateDepQR(){ const qr=document.getElementById('depQR'); if(qr && ADDR[depNet]){ qr.src='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(ADDR[depNet]); qr.style.display='block'; } }
 function selectNet(n){ depNet=n; document.getElementById('netTRC20').classList.toggle('selected',n==='TRC20'); document.getElementById('netERC20').classList.toggle('selected',n==='ERC20'); document.getElementById('depAddrLabel').textContent='USDT '+n+' — Receiving Address'; document.getElementById('depAddr').textContent=ADDR[n]; updateDepQR(); }
 function copyCurrentAddr(){ copyTxt(ADDR[depNet]); }
@@ -297,7 +298,7 @@ async function doDeposit(){
   const fd=new FormData(); fd.append('network',depNet); fd.append('amount',amt); fd.append('tx_hash',tx);
   const f=document.getElementById('depProof').files[0]; if(f) fd.append('proof',f);
   try{
-    const r=await fetch('/api/deposit',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
+    const r=await fetch('/api/deposit',{method:'POST',headers:fdHdrs(),body:fd});
     const txt=await r.text(); let d={}; try{ d=JSON.parse(txt); }catch{ return alert('SERVER ERROR '+r.status+': '+txt.slice(0,200)); }
     if(d.ok){
       alert('✅ Deposit submitted! Status: PENDING — Wait for admin confirmation');
@@ -318,7 +319,7 @@ async function createAd(){
   const fd=new FormData(); fd.append('title',title); fd.append('description',document.getElementById('adDesc').value); fd.append('destination_url',url); fd.append('category',document.getElementById('adCat').value); fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
   const f=document.getElementById('adMedia').files[0]; if(f) fd.append('media',f);
   try{
-    const r=await fetch('/api/advertisement',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
+    const r=await fetch('/api/advertisement',{method:'POST',headers:fdHdrs(),body:fd});
     const txt=await r.text(); let d={}; try{ d=JSON.parse(txt); }catch{ return alert('SERVER ERROR '+r.status+': '+txt.slice(0,200)); }
     if(d.ok){
       alert('✅ Your advertisement has been submitted successfully and is awaiting moderation.');

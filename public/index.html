@@ -60,23 +60,20 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 .pubBox{background:linear-gradient(135deg,#0f2043,#2563eb);color:#fff;border-radius:18px;padding:16px;margin-bottom:12px}
 .pubBox p{font-size:13px;opacity:.9}
 .codebox{background:#0f2043;color:#dbeafe;border-radius:12px;padding:12px;font-size:11px;white-space:pre-wrap;overflow:auto;max-height:320px}
+pre.code{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:8px 0 0}
 </style>
 </head>
 <body>
 <div class="top"><div class="logo">A</div><div><h1>ADS PUBLISHER</h1><p id="welcome">Welcome back</p></div><div class="bell" onclick="showPage('notifications')">🔔</div><div class="avatar" id="avatar">U</div></div>
 <div class="wrap">
-
-<!-- HOME -->
 <div id="page-home">
 <div class="wallet"><small>Available USDT Balance</small><b id="bal">$0.00</b><div class="grid3"><div><span>Total Deposits</span><b id="totDep">$0</b></div><div><span>Ad Spend</span><b id="totSpend">$0</b></div><div><span>Withdrawable</span><b id="totAvail">$0</b></div></div><div class="row" style="margin-top:12px"><button class="btn" style="background:#fff;color:#1e40af" onclick="showPage('deposit')">💰 Deposit</button><button class="btn" style="background:#0f2043;color:#fff" onclick="showPage('withdraw')">🏧 Withdraw</button></div></div>
 <div class="grid2"><div class="stat"><span>Total Campaigns</span><b id="sTotal">0</b></div><div class="stat"><span>Active Campaigns</span><b id="sActive">0</b></div><div class="stat"><span>Pending Moderation</span><b id="sPending">0</b></div><div class="stat"><span>Published Ads</span><b id="sPub">0</b></div></div>
 <div class="pubBox"><h3 style="margin:0">🤖 Become a Publisher — Earn Per View</h3><p>Register your bot, get Pass Code, earn $0.005 per view, withdraw min 10 USDT.</p><button class="btn" style="background:#fff;color:#1e40af" onclick="showPage('publisher')">🤖 Open Publisher →</button><div id="pubHome"></div></div>
 <div class="card"><h3 style="margin:0">⚡ Quick Actions</h3><div class="row" style="margin-top:10px"><button class="btn btn-blue" onclick="showPage('advertise')">📢 Create Advertisement</button><button class="btn btn-light" onclick="showPage('deposit')">💰 Deposit USDT</button></div><div class="row" style="margin-top:8px"><button class="btn btn-white" onclick="showPage('moderation')">📋 View Moderation</button><button class="btn btn-white" onclick="showPage('publisher')">🤖 Publisher</button></div></div>
-<div class="card"><h3 style="margin:0">💳 Deposit Addresses</h3><div class="addr"><b>USDT TRC20</b><br>TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd<br><button class="btn btn-light" style="margin-top:8px;padding:9px" onclick="copyTxt('TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd')">📋 Copy Wallet Address</button></div><div class="addr"><b>USDT ERC20</b><br>0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d<br><button class="btn btn-light" style="margin-top:8px;padding:9px" onclick="copyTxt('0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d')">📋 Copy Wallet Address</button></div></div>
+<div class="card"><h3 style="margin:0">💳 Deposit Addresses — From Admin</h3><div class="addr" style="text-align:center"><b>USDT TRC20</b><br><span id="homeTRC">Loading...</span><br><img id="homeTRC_QR" style="width:140px;height:140px;margin:8px auto"><br><button class="btn btn-light" style="padding:9px" onclick="copyTxt(document.getElementById('homeTRC').textContent)">📋 Copy TRC20</button></div><div class="addr" style="text-align:center"><b>USDT ERC20</b><br><span id="homeERC">Loading...</span><br><img id="homeERC_QR" style="width:140px;height:140px;margin:8px auto"><br><button class="btn btn-light" style="padding:9px" onclick="copyTxt(document.getElementById('homeERC').textContent)">📋 Copy ERC20</button></div></div>
 <div class="card"><h3 style="margin:0">🕘 Recent Activity</h3><div id="recent"></div></div>
 </div>
-
-<!-- ADVERTISE -->
 <div id="page-advertise" class="hidden">
 <div class="card"><h2 style="margin:0">Promote Your Business</h2><p class="muted">Reach more people with ADS PUBLISHER.</p></div>
 <div id="catList"></div>
@@ -94,20 +91,16 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 <button class="btn btn-blue" style="margin-top:12px" onclick="createAd()">🚀 Submit Advertisement</button>
 </div>
 </div>
-
-<!-- DEPOSIT -->
 <div id="page-deposit" class="hidden">
 <div class="card"><h2 style="margin:0">Fund Your Advertising Wallet</h2><p class="muted">Available Balance: <b id="bal2">$0.00</b></p></div>
 <div class="card"><h3 style="margin:0">Select Network</h3><div class="row" style="margin-top:10px"><div class="net selected" id="netTRC20" onclick="selectNet('TRC20')"><b>₮ USDT TRC20</b><br><small>TRON • Low fee</small></div><div class="net" id="netERC20" onclick="selectNet('ERC20')"><b>₮ USDT ERC20</b><br><small>Ethereum</small></div></div>
-<div class="addr"><b id="depAddrLabel">USDT TRC20 — Receiving Address</b><br><span id="depAddr">TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd</span><br><button class="btn btn-light" style="margin-top:8px;padding:9px" onclick="copyCurrentAddr()">📋 Copy Address</button></div>
+<div class="addr" style="text-align:center"><b id="depAddrLabel">USDT TRC20 — Receiving Address</b><br><span id="depAddr">Loading address from Admin...</span><br><img id="depQR" src="" style="width:160px;height:160px;margin:12px auto;border:1px solid #e2e8f0;border-radius:12px;background:#fff;display:none"><p class="muted" style="text-align:center">📷 Scan QR with your wallet app to pay</p><button class="btn btn-light" style="margin-top:8px;padding:9px" onclick="copyCurrentAddr()">📋 Copy Address</button></div>
 <label>Deposit Amount (USDT)</label><input id="depAmount" type="number" placeholder="e.g. 10">
-<label>Transaction Hash <span class="muted">(Optional — leave empty if you no get am yet)</span></label><input id="depTx" placeholder="TX Hash (optional)">
+<label>Transaction Hash <span class="muted">(Optional)</span></label><input id="depTx" placeholder="TX Hash (optional)">
 <label>Upload Payment Screenshot</label><input id="depProof" type="file" accept="image/*">
 <button class="btn btn-blue" style="margin-top:12px" onclick="doDeposit()">✅ Submit Deposit</button></div>
 <div class="card"><h3 style="margin:0">Recent Deposits</h3><div id="depList"></div></div>
 </div>
-
-<!-- WITHDRAW -->
 <div id="page-withdraw" class="hidden">
 <div class="card"><h2 style="margin:0">Withdraw Funds</h2><p class="muted">Manual admin approval — admin go send payment after approval.</p>
 <div style="background:#eff6ff;border-radius:14px;padding:14px;margin-top:10px"><small>Available Withdrawable Balance</small><b style="font-size:26px;display:block" id="wdBal">$0.00</b><span style="font-size:12px;color:#64748b">Minimum withdrawal: <b>10 USDT</b> • Fee: <b>10%</b></span></div>
@@ -119,8 +112,6 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 <button class="btn btn-blue" style="margin-top:12px" onclick="confirmWithdraw()">🏧 Submit Withdrawal Request</button></div>
 <div class="card"><h3 style="margin:0">Withdrawal History</h3><div id="wdHistory"></div></div>
 </div>
-
-<!-- PUBLISHER -->
 <div id="page-publisher" class="hidden">
 <div class="pubBox"><h2 style="margin:0">🤖 Publisher</h2><p>Earn $0.005 per view. When admin approve you, copy code below and paste am for your bot — ads go automatically show for your bot.</p></div>
 <div class="card"><h3 style="margin:0">📊 My Statistics</h3><p class="muted">Live from your bot — impressions, clicks, earnings.</p>
@@ -135,18 +126,18 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 <div class="card"><h3 style="margin:0">📋 Per-Ad Performance</h3><div id="pubAdStats"></div></div>
 <div class="card"><h3 style="margin:0">Register Publisher Bot</h3><input id="pubBot" placeholder="@mybot"><input id="pubName" placeholder="Bot Name"><input id="pubUrl" placeholder="Mini App URL (optional)"><button class="btn btn-blue" style="margin-top:10px" onclick="regPublisher()">🤖 Register Publisher Bot</button></div>
 <div class="card"><h3 style="margin:0">My Publishers</h3><div id="pubList"></div></div>
-<div class="card"><h3 style="margin:0">💻 Bot Integration Code</h3><p class="muted">After admin approve, copy this code and paste am for your bot code.</p><div id="pubCodeBox" class="codebox">Waiting for approval...</div><button class="btn btn-blue" style="margin-top:10px" onclick="copyPubCode()">📋 Copy Bot Code</button><button class="btn btn-white" style="margin-top:8px" onclick="copyApiKey()">🔑 Copy API Key</button></div>
+<div class="card"><h3 style="margin:0">💻 Bot Integration Code — Like Ads Galaxy</h3><p class="muted">Place Header for HEAD, Body where users should trigger an ad.</p>
+<div style="background:#0f2043;color:#dbeafe;border-radius:14px;padding:12px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px;letter-spacing:1px">HEADER CODE</b><button class="btn btn-light" style="width:auto;padding:7px 10px;font-size:12px" onclick="copyTxt(document.getElementById('headerCode').textContent)">📋 Copy Header</button></div><pre id="headerCode" class="code">Waiting for approval...</pre></div>
+<div style="background:#0f2043;color:#dbeafe;border-radius:14px;padding:12px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px;letter-spacing:1px">BODY CODE</b><button class="btn btn-light" style="width:auto;padding:7px 10px;font-size:12px" onclick="copyTxt(document.getElementById('bodyCode').textContent)">📋 Copy Body</button></div><pre id="bodyCode" class="code">Waiting for approval...</pre></div>
+<div style="background:#0f2043;color:#dbeafe;border-radius:14px;padding:12px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px;letter-spacing:1px">REWARD CALLBACK PAYLOAD</b><button class="btn btn-light" style="width:auto;padding:7px 10px;font-size:12px" onclick="copyTxt(document.getElementById('callbackCode').textContent)">📋 Copy Callback</button></div><pre id="callbackCode" class="code">Waiting for approval...</pre></div>
+<button class="btn btn-blue" style="margin-top:10px" onclick="copyPubCode()">📋 Copy All Bot Code</button><button class="btn btn-white" style="margin-top:8px" onclick="copyApiKey()">🔑 Copy API Key</button></div>
 <div class="card"><h3 style="margin:0">How to Earn</h3><p class="muted">1. Register bot → 2. Admin approve → 3. Copy Code → 4. Paste for your bot → 5. Earn per view → 6. Withdraw min 10 USDT</p></div>
 </div>
-
-<!-- MODERATION -->
 <div id="page-moderation" class="hidden">
 <div class="card"><h2 style="margin:0">My Advertisements</h2><p class="muted">Track approval status.</p><div class="grid2" style="margin-top:10px"><div class="stat"><span>Total Submitted</span><b id="mTotal">0</b></div><div class="stat"><span>Pending</span><b id="mPending">0</b></div><div class="stat"><span>Approved</span><b id="mApproved">0</b></div><div class="stat"><span>Rejected</span><b id="mRejected">0</b></div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="chip active" id="fAll" onclick="setFilter('all')">All</button><button class="chip" id="fPending" onclick="setFilter('pending')">Pending</button><button class="chip" id="fReviewed" onclick="setFilter('reviewed')">Reviewed</button></div></div>
 <div id="modList"></div>
 <div class="card" style="text-align:center"><button class="btn btn-blue" onclick="showPage('advertise')">+ Create Advertisement</button></div>
 </div>
-
-<!-- ACCOUNT -->
 <div id="page-account" class="hidden">
 <div class="card" style="text-align:center"><div class="avatar" style="width:72px;height:72px;font-size:26px;margin:0 auto" id="avatar2">U</div><h3 id="accName" style="margin:10px 0 2px">@user</h3><p class="muted" id="accId">ID —</p><div style="background:#eff6ff;border-radius:12px;padding:12px;margin-top:10px"><small>Advertising Wallet Balance</small><b id="accBal" style="font-size:22px;display:block">$0.00</b></div></div>
 <div class="pubBox"><h3 style="margin:0">🤖 Publisher</h3><p>Your bots + earnings dey here. Tap to open.</p><button class="btn" style="background:#fff;color:#1e40af" onclick="showPage('publisher')">🤖 Open Publisher →</button></div>
@@ -163,14 +154,10 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 <div class="list" onclick="alert('Terms: Lawful advertising only.')"><div class="ic">📄</div><div><b>Terms and Conditions</b></div><span>›</span></div>
 </div>
 </div>
-
-<!-- NOTIFICATIONS -->
 <div id="page-notifications" class="hidden"><div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Notifications</h2><button class="btn btn-light" style="width:auto;padding:8px 12px" onclick="markRead()">Mark All as Read</button></div><div id="notifList"></div></div></div>
 </div>
-
 <div id="detailModal" class="modal hidden"><div class="box"><button class="btn btn-white" onclick="closeDetail()">← Back</button><div id="detailContent"></div></div></div>
 <div id="wdModal" class="modal hidden"><div class="box"><h3>Confirm Withdrawal</h3><div id="wdConfirmText"></div><div class="row" style="margin-top:12px"><button class="btn btn-white" onclick="closeWdModal()">Cancel</button><button class="btn btn-blue" onclick="submitWithdraw()">Confirm & Submit</button></div></div></div>
-
 <div class="bottom">
 <button class="active" id="nav-home" onclick="showPage('home')"><i>🏠</i>HOME</button>
 <button id="nav-advertise" onclick="showPage('advertise')"><i>📢</i>ADVERTISE</button>
@@ -178,13 +165,12 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 <button id="nav-moderation" onclick="showPage('moderation')"><i>📋</i>MODERATION</button>
 <button id="nav-account" onclick="showPage('account')"><i>👤</i>ACCOUNT</button>
 </div>
-
 <script>
 const tg=window.Telegram.WebApp; tg.ready(); tg.expand();
 let DATA=null, selectedPkg=null, selectedCat='Telegram Channel Promotion', depNet='TRC20', wdNet='TRC20', filter='all', readAll=false, CURRENT_PUB=null;
 const ADDR={TRC20:'TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd',ERC20:'0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d'};
 const CATS=[{n:'Telegram Channel Promotion',d:'Promote in Telegram channels',i:'📢'},{n:'Telegram Bot Promotion',d:'Grow your Telegram bot',i:'🤖'},{n:'Mini App Promotion',d:'Drive users to your Mini App',i:'📱'},{n:'Website Promotion',d:'Send traffic to website',i:'🌐'},{n:'Business Promotion',d:'Grow your business',i:'🏢'},{n:'Image Advertisement',d:'Beautiful image ads',i:'🖼️'},{n:'Video Advertisement',d:'Engaging video ads',i:'🎬'},{n:'Product Promotion',d:'Sell your product faster',i:'🛍️'}];
-function copyTxt(t){ navigator.clipboard.writeText(t); alert('Copied: '+t); }
+function copyTxt(t){ try{navigator.clipboard.writeText(t);}catch(e){} alert('Copied: '+t); }
 function showPage(p){
   ['home','advertise','deposit','withdraw','moderation','account','notifications','publisher'].forEach(x=> document.getElementById('page-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('.bottom button').forEach(b=>b.classList.remove('active'));
@@ -193,7 +179,8 @@ function showPage(p){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function hdrs(){ return {'Content-Type':'application/json','x-telegram-initdata':tg.initData||'','x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})} }
-function selectNet(n){ depNet=n; document.getElementById('netTRC20').classList.toggle('selected',n==='TRC20'); document.getElementById('netERC20').classList.toggle('selected',n==='ERC20'); document.getElementById('depAddrLabel').textContent='USDT '+n+' — Receiving Address'; document.getElementById('depAddr').textContent=ADDR[n]; }
+function updateDepQR(){ const qr=document.getElementById('depQR'); if(qr && ADDR[depNet]){ qr.src='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(ADDR[depNet]); qr.style.display='block'; } }
+function selectNet(n){ depNet=n; document.getElementById('netTRC20').classList.toggle('selected',n==='TRC20'); document.getElementById('netERC20').classList.toggle('selected',n==='ERC20'); document.getElementById('depAddrLabel').textContent='USDT '+n+' — Receiving Address'; document.getElementById('depAddr').textContent=ADDR[n]; updateDepQR(); }
 function copyCurrentAddr(){ copyTxt(ADDR[depNet]); }
 function selectWdNet(n){ wdNet=n; document.getElementById('wdTRC20').classList.toggle('selected',n==='TRC20'); document.getElementById('wdERC20').classList.toggle('selected',n==='ERC20'); }
 function calcFee(){ const a=parseFloat(document.getElementById('wdAmount').value||0); const fee=a*0.10; document.getElementById('wdFee').textContent='$'+fee.toFixed(2); document.getElementById('wdReceive').textContent='$'+Math.max(0,a-fee).toFixed(2); }
@@ -224,13 +211,30 @@ function openDetail(id){ const a=(DATA?.ads||[]).find(x=>x.id==id); if(!a) retur
 function closeDetail(){ document.getElementById('detailModal').classList.add('hidden'); }
 function markRead(){ readAll=true; renderNotif(); alert('All notifications marked as read'); }
 function renderNotif(){ const n=[]; (DATA?.deposits||[]).forEach(d=> n.push({t:'Deposit '+d.status,d:`${d.amount} USDT ${d.network} • TX ${d.tx_hash}`,date:d.created_at||'',ic:'💰'})); (DATA?.ads||[]).forEach(a=> n.push({t:'Advertisement '+a.status,d:`${a.title} • $${a.price}`,date:a.created_at||'',ic:'📢'})); if(!n.length) n.push({t:'Welcome to ADS PUBLISHER',d:'Deposit and create your first ad.',date:'',ic:'👋'}); document.getElementById('notifList').innerHTML=n.map(x=>`<div class="list"><div class="ic">${x.ic}</div><div><b>${x.t}</b><p>${x.d}</p><p>${x.date||''}</p></div>${readAll?'':'<span class="dot"></span>'}</div>`).join(''); }
-function getPubCode(){
-  if(!CURRENT_PUB) return "Waiting for approval...";
-  const base = window.location.origin;
-  return `# ADS PUBLISHER - PASTE INSIDE YOUR BOT\n# pip install requests\nimport requests\nADS_API = "${base}/api/publisher/ads"\nAPI_KEY = "${CURRENT_PUB.api_key||''}"\nPCODE = "${CURRENT_PUB.pcode||''}"\nBASE = "${base}"\n\ndef get_ads():\n    r = requests.get(ADS_API, params={"api_key": API_KEY, "pcode": PCODE}, timeout=10)\n    return r.json() if r.status_code==200 else []\n\n# When user sends /start, call get_ads() and send first ad:\n# ads = get_ads()\n# for ad in ads[:1]:\n#     await message.answer(ad["title"]+"\\n"+ad["destination_url"])\n#     requests.post(BASE+"/api/publisher/view", json={"api_key":API_KEY,"pcode":PCODE,"ad_id":ad["id"],"viewer_id":str(user_id)})\n# When user clicks ad button:\n# requests.post(BASE+"/api/publisher/click", json={"api_key":API_KEY,"pcode":PCODE,"ad_id":ad["id"],"viewer_id":str(user_id)})\n`;
+async function loadDepositAddresses(){
+  try{
+    const r=await fetch('/api/settings-public'); const s=await r.json();
+    const trc=s.USDT_TRC20||ADDR.TRC20, erc=s.USDT_ERC20||ADDR.ERC20;
+    ADDR.TRC20=trc; ADDR.ERC20=erc;
+    document.getElementById('depAddr').textContent=ADDR[depNet]; updateDepQR();
+    const hT=document.getElementById('homeTRC'); if(hT){ hT.textContent=trc; document.getElementById('homeTRC_QR').src='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent(trc); }
+    const hE=document.getElementById('homeERC'); if(hE){ hE.textContent=erc; document.getElementById('homeERC_QR').src='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent(erc); }
+  }catch(e){}
 }
-function copyPubCode(){ navigator.clipboard.writeText(getPubCode()); alert('Bot code copied! Paste am for your bot.'); }
-function copyApiKey(){ if(CURRENT_PUB){ navigator.clipboard.writeText(CURRENT_PUB.api_key||''); alert('API Key copied'); } else alert('No publisher yet'); }
+function renderPubCodes(){
+  const base=window.location.origin;
+  const pcode=CURRENT_PUB?.pcode||'pXXX';
+  const key=CURRENT_PUB?.api_key||'YOUR_API_KEY';
+  const h=document.getElementById('headerCode'); if(h) h.textContent=`<script src="${base}/ads.js" data-pcode="${pcode}" data-api-key="${key}"><\/script>`;
+  const b=document.getElementById('bodyCode'); if(b) b.textContent=`// Place the body code where users should trigger an ad.\nwindow.showAdsPublisher();\n\n// Optional robust handling:\nwindow.showAdsPublisher()\n.then(function(result){\n  // Send result.request_id to your backend\n  // Do not credit a valuable wallet here\n})\n.catch(function(error){\n  console.log(error.code, error.message)\n});`;
+  const c=document.getElementById('callbackCode'); if(c) c.textContent=`{\n  "pcode": "${pcode}",\n  "api_key": "${key}",\n  "ad_id": 123,\n  "viewer_id": "USER_TELEGRAM_ID",\n  "request_id": "req_abc123",\n  "reward": 0.005\n}\n\n// POST to: ${base}/api/publisher/view\n// Body: {api_key, pcode, ad_id, viewer_id}`;
+}
+function getPubCode(){
+  const base=window.location.origin;
+  return `# ADS PUBLISHER - HEADER + BODY\n# HEADER (put in <head>):\n# <script src="${base}/ads.js" data-pcode="${CURRENT_PUB?.pcode||''}" data-api-key="${CURRENT_PUB?.api_key||''}"><\\/script>\n# BODY (where user triggers ad):\n# window.showAdsPublisher()\n# REWARD CALLBACK: POST ${base}/api/publisher/view {api_key, pcode, ad_id, viewer_id}\n`;
+}
+function copyPubCode(){ copyTxt(getPubCode()); }
+function copyApiKey(){ if(CURRENT_PUB){ copyTxt(CURRENT_PUB.api_key||''); } else alert('No publisher yet'); }
 function renderPublisherStats(){
   const pubs = DATA?.publishers || [];
   if(!pubs.length){
@@ -268,7 +272,8 @@ async function loadMe(){
     document.getElementById('pubList').innerHTML=pubHtml;
     document.getElementById('pubHome').innerHTML=(DATA.publishers||[]).length? `<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px;margin-top:10px">${(DATA.publishers||[]).map(p=>p.bot_username+' — '+p.pcode+' • '+p.status).join('<br>')}</div>` : '';
     const approved=(DATA.publishers||[]).find(p=>p.status==='Approved');
-    if(approved){ CURRENT_PUB=approved; document.getElementById('pubCodeBox').textContent=getPubCode(); } else { CURRENT_PUB=null; document.getElementById('pubCodeBox').textContent="⏳ Waiting for admin approval...\n\nYour bot: "+((DATA.publishers||[])[0]?.bot_username||'—')+" is "+((DATA.publishers||[])[0]?.status||'Pending')+"\n\nAfter admin approve, code go show here automatically. Refresh this page."; }
+    if(approved){ CURRENT_PUB=approved; } else { CURRENT_PUB=(DATA.publishers||[])[0]||null; }
+    renderPubCodes();
     document.getElementById('wdPubList').innerHTML=(DATA.publishers||[]).map(p=>`<div class="item" onclick="document.getElementById('wdPubId').value='${p.id}'"><b>${p.bot_username} — ${p.pcode}</b><br><span class="muted">Tap to select for withdrawal</span></div>`).join('')||'';
     if(DATA.publishers?.[0]) document.getElementById('wdPubId').value=DATA.publishers[0].id;
     const wds = DATA.withdrawals || (DATA.txs||[]).filter(t=>t.type==='publisher_withdraw');
@@ -285,62 +290,48 @@ async function loadPkgs(){ try{ const r=await fetch('/api/packages'); const pkgs
 function confirmWithdraw(){ const amt=parseFloat(document.getElementById('wdAmount').value||0); const addr=document.getElementById('wdAddress').value.trim(); if(!amt||amt<10) return alert('❌ Minimum withdrawal is 10 USDT. You entered $'+amt); if(!addr) return alert('Enter your USDT wallet address'); if(amt>(DATA?.wallet?.available||0)) return alert('Insufficient balance'); const fee=amt*0.10; const rec=amt-fee; document.getElementById('wdConfirmText').innerHTML=`<p><b>Amount:</b> $${amt}</p><p><b>Network:</b> USDT ${wdNet}</p><p><b>Wallet:</b> ${addr.slice(0,6)}...${addr.slice(-4)}</p><p><b>Fee (10%):</b> $${fee.toFixed(2)}</p><p><b>You will receive:</b> $${rec.toFixed(2)}</p><p class="muted">Admin will approve manually and send payment.</p>`; document.getElementById('wdModal').classList.remove('hidden'); }
 function closeWdModal(){ document.getElementById('wdModal').classList.add('hidden'); }
 async function submitWithdraw(){ closeWdModal(); let pid=document.getElementById('wdPubId').value; if(!pid){ const u=tg.initDataUnsafe?.user||{}; const reg=await fetch('/api/publisher/register',{method:'POST',headers:hdrs(),body:JSON.stringify({bot_username:'@'+(u.username||'user'+u.id),bot_name:'Withdraw Wallet',mini_app_url:''})}); const rd=await reg.json(); if(rd.id) pid=rd.id; else return alert(rd.error||'Please register publisher first'); } const body={publisher_id:pid,amount:document.getElementById('wdAmount').value,wallet_address:document.getElementById('wdAddress').value,network:wdNet}; const r=await fetch('/api/publisher/withdraw',{method:'POST',headers:hdrs(),body:JSON.stringify(body)}); const d=await r.json(); alert(d.ok?'✅ Withdrawal Request Submitted! Status: Pending':('❌ '+(d.error||'Failed'))); if(d.ok) loadMe(); }
-
-// --- FIXED: DEPOSIT -> PENDING IMMEDIATELY ---
 async function doDeposit(){
   const amt = document.getElementById('depAmount').value;
   const tx = document.getElementById('depTx').value.trim();
   if(!amt || parseFloat(amt)<=0) return alert('Enter Deposit Amount e.g. 200');
-  const fd=new FormData();
-  fd.append('network',depNet);
-  fd.append('amount',amt);
-  fd.append('tx_hash',tx);
-  const f=document.getElementById('depProof').files[0];
-  if(f) fd.append('proof',f);
+  const fd=new FormData(); fd.append('network',depNet); fd.append('amount',amt); fd.append('tx_hash',tx);
+  const f=document.getElementById('depProof').files[0]; if(f) fd.append('proof',f);
   try{
     const r=await fetch('/api/deposit',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
-    const d=await r.json();
+    const txt=await r.text(); let d={}; try{ d=JSON.parse(txt); }catch{ return alert('SERVER ERROR '+r.status+': '+txt.slice(0,200)); }
     if(d.ok){
       alert('✅ Deposit submitted! Status: PENDING — Wait for admin confirmation');
-      const list=document.getElementById('depList');
-      const item=document.createElement('div'); item.className='item';
+      const list=document.getElementById('depList'); const item=document.createElement('div'); item.className='item';
       item.innerHTML=`<b>${amt} USDT ${depNet}</b> <span class="badge b-pending">Pending</span><br><span class="muted">TX: ${tx||'Pending'} • Just now</span>`;
       if(list) list.prepend(item);
       document.getElementById('depAmount').value=''; document.getElementById('depTx').value=''; document.getElementById('depProof').value='';
       loadMe(); showPage('deposit');
-    } else alert('❌ '+(d.error||'Failed'));
-  }catch(e){ alert('❌ Network error, try again'); }
+    } else alert('❌ '+(d.error||'Failed')+' | Status: '+r.status);
+  }catch(e){ alert('❌ FETCH FAILED: '+e.message); }
 }
-
-// --- FIXED: AD -> MODERATION / PENDING IMMEDIATELY ---
 async function createAd(){
   if(!selectedPkg) return alert('Select a package first');
   const title=document.getElementById('adTitle').value.trim();
   const url=document.getElementById('adUrl').value.trim();
   if(!title) return alert('Enter Advertisement Title');
   if(!url) return alert('Enter Destination URL e.g. https://yourlink.com');
-  const fd=new FormData();
-  fd.append('title',title); fd.append('description',document.getElementById('adDesc').value);
-  fd.append('destination_url',url); fd.append('category',document.getElementById('adCat').value);
-  fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
+  const fd=new FormData(); fd.append('title',title); fd.append('description',document.getElementById('adDesc').value); fd.append('destination_url',url); fd.append('category',document.getElementById('adCat').value); fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
   const f=document.getElementById('adMedia').files[0]; if(f) fd.append('media',f);
   try{
     const r=await fetch('/api/advertisement',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
-    const d=await r.json();
+    const txt=await r.text(); let d={}; try{ d=JSON.parse(txt); }catch{ return alert('SERVER ERROR '+r.status+': '+txt.slice(0,200)); }
     if(d.ok){
       alert('✅ Your advertisement has been submitted successfully and is awaiting moderation.');
-      const priceTxt=document.getElementById('pkgPrice').textContent||'$0';
-      const list=document.getElementById('modList');
-      const item=document.createElement('div'); item.className='item';
+      const priceTxt=document.getElementById('pkgPrice').textContent||'$0'; const list=document.getElementById('modList'); const item=document.createElement('div'); item.className='item';
       item.innerHTML=`<div style="display:flex;gap:10px"><div style="width:64px;height:64px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:28px">📢</div><div style="flex:1"><b>${title}</b><br><span class="muted">${document.getElementById('adCat').value} • Just now</span><br><span class="muted">Paid: ${priceTxt}</span><br><span class="badge b-pending">🟠 Pending Moderation</span></div></div>`;
       if(list) list.prepend(item);
       document.getElementById('adTitle').value=''; document.getElementById('adDesc').value=''; document.getElementById('adUrl').value=''; document.getElementById('adMedia').value='';
       loadMe(); showPage('moderation');
-    } else alert('❌ '+(d.error||'Failed - Check balance. Deposit first if balance low.'));
-  }catch(e){ alert('❌ Network error, try again'); }
+    } else alert('❌ '+(d.error||'Failed')+' | Status: '+r.status);
+  }catch(e){ alert('❌ FETCH FAILED: '+e.message); }
 }
 async function regPublisher(){ const body={bot_username:document.getElementById('pubBot').value,bot_name:document.getElementById('pubName').value,mini_app_url:document.getElementById('pubUrl')?.value||''}; const r=await fetch('/api/publisher/register',{method:'POST',headers:hdrs(),body:JSON.stringify(body)}); const d=await r.json(); alert(d.ok?`✅ Registered! Pass Code: ${d.pcode}`:(d.error||'Failed')); if(d.ok) loadMe(); }
-renderCats(); loadMe(); loadPkgs();
+renderCats(); loadMe(); loadPkgs(); loadDepositAddresses();
 </script>
 </body>
 </html>

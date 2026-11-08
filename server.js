@@ -4,11 +4,11 @@ const multer = require('multer');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
+const path = require('path');
 const DB = require('./database');
 const { User, Wallet, Deposit, Transaction, Advertisement, Campaign, Publication, Package, Setting, Publisher, PublisherView, PublisherClick, PublisherWithdrawal, nextId } = DB;
 const { sendTelegram } = require('./bot');
 const app = express();
-// ===== CORS FIX - ALLOW PAYOUT TO FETCH =====
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
@@ -25,6 +25,17 @@ async function safeSend(to,msg,media){ try{ if(!to) return null; return await se
 async function getSettings(){ const rows = await Setting.find(); const o={}; rows.forEach(r=> o[r.key]=r.value); return o; }
 async function getSetting(key, def=''){ const s = await Setting.findOne({key}); return s ? s.value : def; }
 async function addTx(user_id,type,amount,balance_after,ref_type,ref_id,note){ const id=await nextId('transactions'); return Transaction.create({id,user_id,type,amount,balance_after,ref_type,ref_id,note}); }
+
+// ===== EARNING PER 1K - ADMIN ONLY INPUT =====
+// Admin sets PUBLISHER_REWARD_PER_1000 in Admin Settings. Publisher NO see this input.
+// Publisher only sees his OWN calculated CPM / CPC / CTR in his statistics.
+async function getRewardPerView(){
+  const per1000 = parseFloat(await getSetting('PUBLISHER_REWARD_PER_1000', '5') || '5');
+  return per1000 / 1000;
+}
+async function getRewardPer1000(){
+  return parseFloat(await getSetting('PUBLISHER_REWARD_PER_1000', '5') || '5');
+}
 
 function verifyInitData(initData){
   if(!initData) return null;
@@ -56,6 +67,7 @@ app.post('/api/admin/login',(req,res)=>{
   res.status(401).json({error:'Wrong admin login'});
 });
 
+// ===== /api/me - PUBLISHER STATISTICS WITH CPM / CPC / CTR =====
 app.get('/api/me',auth, async(req,res)=>{
   try{
     const w = await Wallet.findOne({user_id:req.user.id});
@@ -66,7 +78,9 @@ app.get('/api/me',auth, async(req,res)=>{
     const withdrawals = await PublisherWithdrawal.find({user_id:req.user.id}).sort({id:-1}).limit(20);
     const active = await Advertisement.countDocuments({user_id:req.user.id, status:{$in:['Approved','Published','Scheduled']}});
     const pending = await Advertisement.countDocuments({user_id:req.user.id, status:'Awaiting Moderation'});
+    const perView = await getRewardPerView(); // backend only, NOT sent as rate
     let publisher_stats=[];
+    let total_views_all=0, total_clicks_all=0, total_earned_all=0;
     if(pubs.length){
       const ids = pubs.map(p=>p.id);
       const views = await PublisherView.aggregate([{$match:{publisher_id:{$in:ids}}},{$group:{_id:'$ad_id', c:{$sum:1}}}]);
@@ -76,10 +90,22 @@ app.get('/api/me',auth, async(req,res)=>{
       for(const ad_id of allIds){
         const v = views.find(x=>x._id==ad_id)?.c||0; const cl = clicks.find(x=>x._id==ad_id)?.c||0;
         let ad = adMap[ad_id] || await Advertisement.findOne({id:ad_id}) || {};
-        publisher_stats.push({ad_id, title: ad.title||('Ad #'+ad_id), views:v, impressions:v, clicks:cl, earned: Number((v*0.005).toFixed(3))});
+        const earned = Number((v*perView).toFixed(4));
+        // ===== CPM / CPC / CTR FOR THIS AD =====
+        const cpm = v > 0 ? Number(((earned / v) * 1000).toFixed(2)) : 0; // Earned per 1000 views
+        const cpc = cl > 0 ? Number((earned / cl).toFixed(4)) : 0; // Earned per click
+        const ctr = v > 0 ? Number(((cl / v) * 100).toFixed(2)) : 0; // Click-through rate %
+        total_views_all += v; total_clicks_all += cl; total_earned_all += earned;
+        publisher_stats.push({ad_id, title: ad.title||('Ad #'+ad_id), views:v, impressions:v, clicks:cl, earned, cpm, cpc, ctr});
       }
     }
-    res.json({user:req.user,wallet:w,ads,txs,deposits:deps,publishers:pubs,withdrawals,publisher_stats,active,pending});
+    // ===== TOTALS FOR PUBLISHER STATISTICS HEADER =====
+    const total_cpm = total_views_all > 0 ? Number(((total_earned_all / total_views_all) * 1000).toFixed(2)) : 0;
+    const total_cpc = total_clicks_all > 0 ? Number((total_earned_all / total_clicks_all).toFixed(4)) : 0;
+    const total_ctr = total_views_all > 0 ? Number(((total_clicks_all / total_views_all) * 100).toFixed(2)) : 0;
+    const publisher_totals = { views: total_views_all, impressions: total_views_all, clicks: total_clicks_all, earned: Number(total_earned_all.toFixed(4)), cpm: total_cpm, cpc: total_cpc, ctr: total_ctr };
+    // NOTE: NO reward_per_1000 sent - Admin input stays hidden. Publisher only sees his calculated CPM/CPC
+    res.json({user:req.user,wallet:w,ads,txs,deposits:deps,publishers:pubs,withdrawals,publisher_stats,publisher_totals,active,pending});
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
@@ -87,10 +113,19 @@ app.get('/api/packages', async(req,res)=>{ res.json(await Package.find({active:1
 app.get('/api/settings-public', async(req,res)=>{
   try{
     const o = await getSettings();
-    res.json({USDT_TRC20:o.USDT_TRC20||process.env.USDT_TRC20_ADDRESS||'TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd',USDT_ERC20:o.USDT_ERC20||process.env.USDT_ERC20_ADDRESS||'0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d',TRC20_ENABLED:o.TRC20_ENABLED,ERC20_ENABLED:o.ERC20_ENABLED,SUPPORT_USERNAME:o.SUPPORT_USERNAME,PUBLISHER_REWARD_PER_VIEW:o.PUBLISHER_REWARD_PER_VIEW||'0.005'});
-  }catch(e){ res.json({USDT_TRC20:'TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd',USDT_ERC20:'0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d',PUBLISHER_REWARD_PER_VIEW:'0.005'}); }
+    res.json({USDT_TRC20:o.USDT_TRC20||process.env.USDT_TRC20_ADDRESS||'TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd',USDT_ERC20:o.USDT_ERC20||process.env.USDT_ERC20_ADDRESS||'0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d',TRC20_ENABLED:o.TRC20_ENABLED,ERC20_ENABLED:o.ERC20_ENABLED,SUPPORT_USERNAME:o.SUPPORT_USERNAME});
+  }catch(e){ res.json({USDT_TRC20:'TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd',USDT_ERC20:'0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d'}); }
 });
-// NOTE: NO app.get('/ads.js') HERE - public/ads.js will be served by express.static('public')
+
+app.get('/ads.js',(req,res)=>{
+  res.setHeader('Content-Type','application/javascript');
+  res.setHeader('Access-Control-Allow-Origin','*');
+  const filePath = path.join(__dirname, 'public', 'ads.js');
+  if(fs.existsSync(filePath)){
+    return res.sendFile(filePath);
+  }
+  res.send(`// ADS.JS FALLBACK - see public/ads.js`);
+});
 
 app.post('/api/deposit',auth,upload.single('proof'), async(req,res)=>{
   try{
@@ -133,7 +168,6 @@ app.get('/api/ads/published', async(req,res)=>{
 });
 app.post('/api/ads/:id/click', async(req,res)=>{ try{ await Campaign.updateOne({ad_id:Number(req.params.id)}, {$inc:{clicks:1}}); }catch(e){} res.json({ok:true}); });
 
-// === PUBLISHER ===
 app.post('/api/publisher/register',auth, async(req,res)=>{
   try{
     const {bot_username, mini_app_url, bot_name}=req.body;
@@ -173,7 +207,8 @@ async function doReward(req,res){
     if(!pcode||!ad_id) return res.status(400).json({error:'Missing pcode/ad_id'});
     const pub=await Publisher.findOne({pcode}); if(!pub||pub.status!=='Approved') return res.status(403).json({error:'Publisher not approved'});
     if(api_key && pub.api_key!==api_key) return res.status(401).json({error:'Invalid API key'});
-    const reward=parseFloat(await getSetting('PUBLISHER_REWARD_PER_VIEW','0.005') || '0.005');
+    const per1000 = await getRewardPer1000();
+    const reward = per1000 / 1000;
     const oneHourAgo = new Date(Date.now()-3600*1000);
     const recent=await PublisherView.findOne({pcode, ad_id:Number(ad_id), viewer_id:viewer_id||'anon', created_at:{$gt:oneHourAgo}});
     if(recent) return res.json({ok:true, rewarded:0, note:'Already rewarded recently'});
@@ -223,7 +258,7 @@ app.post('/api/publisher/withdraw',auth, async(req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 
-// === ADMIN ===
+// === ADMIN - ONLY ADMIN SEES INPUT RATE ===
 app.get('/api/admin/stats',adminAuth, async(req,res)=>{
   try{
     const totalUsers=await User.countDocuments();
@@ -242,7 +277,7 @@ app.get('/api/admin/stats',adminAuth, async(req,res)=>{
     const activeCampaigns=await Campaign.countDocuments({status:'Active'});
     const completed=await Advertisement.countDocuments({status:'Completed'});
     const pendingWithdrawals=await PublisherWithdrawal.countDocuments({status:'Pending'});
-    res.json({totalUsers,totalAdvertisers,totalPublishers,pendingPublishers,totalDeposits,pendingDeposits,confirmedDeposits,totalRevenue,totalAds,pendingModeration,approved,published,activeCampaigns,completed,pendingWithdrawals});
+    res.json({totalUsers,totalAdvertisers,totalPublishers,pendingPublishers,totalDeposits,pendingDeposits,confirmedDeposits,totalRevenue,totalAds,pendingModeration,approved,published,activeCampaigns,completed,pendingWithdrawals, reward_per_1000: await getRewardPer1000()});
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 app.get('/api/admin/users',adminAuth, async(req,res)=>{
@@ -287,7 +322,11 @@ app.post('/api/admin/ad/:id/publish',adminAuth, async(req,res)=>{
   try{
     const ad=await Advertisement.findOne({id:Number(req.params.id)}); if(!ad||ad.status!=='Approved') return res.status(400).json({error:'Must be Approved first'});
     const channel=process.env.TELEGRAM_CHANNEL_USERNAME||'@yourchannel';
-    const exists=await Publication.findOne({ad_id:ad.id, channel}); if(exists) return res.status(400).json({error:'Already published'});
+    const exists=await Publication.findOne({ad_id:ad.id, channel});
+    if(exists){
+      await Advertisement.updateOne({id:ad.id}, {status:'Published', published_at:new Date()});
+      return res.json({ok:true, already_published:true});
+    }
     const msgId=await safeSend(channel,`📢 ${ad.title}\n\n${ad.description||''}\n\n👉 ${ad.destination_url}`,ad.media_path);
     const pid=await nextId('publications');
     await Publication.create({id:pid,ad_id:ad.id,channel,message_id:String(msgId||'')});
@@ -347,7 +386,6 @@ app.post('/api/admin/withdrawal/:id/reject',adminAuth, async(req,res)=>{
 });
 app.use((err,req,res,next)=>{ console.log('API ERROR',err.message); if(req.path.startsWith('/api')) return res.status(500).json({error:err.message}); next(err); });
 
-// Bot - MUST NEVER crash server
 try{
   const {bot}=require('./bot');
   if(process.env.BOT_TOKEN && process.env.BOT_TOKEN!=='PLACEHOLDER'){
@@ -358,4 +396,4 @@ process.on('unhandledRejection', (e)=> console.log('Unhandled (ignored):', e?.me
 process.on('uncaughtException', (e)=> console.log('Uncaught (ignored):', e?.message||e));
 
 const PORT=process.env.PORT||3000;
-app.listen(PORT,()=> console.log(`ADS PUBLISHER (Mongo FULL) running on ${PORT}`));
+app.listen(PORT,()=> console.log(`ADS PUBLISHER (Mongo FULL - CPM/CPC STATS) running on ${PORT}`));

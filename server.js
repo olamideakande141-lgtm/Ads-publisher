@@ -13,7 +13,6 @@ app.use('/uploads', express.static('uploads'));
 if(!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 const upload = multer({dest:'uploads/', limits:{fileSize:25*1024*1024}, fileFilter:(req,file,cb)=>{ cb(null, ['image/jpeg','image/png','image/jpg','image/webp','video/mp4'].includes(file.mimetype)); }});
 
-// --- AUTO MIGRATION: add clicks / fee columns if missing ---
 function ensureCol(table, col, def){
   try{ const cols = db.prepare(`PRAGMA table_info(${table})`).all().map(c=>c.name); if(!cols.includes(col)) db.prepare(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`).run(); }catch(e){ console.log('migrate',table,col,e.message); }
 }
@@ -22,7 +21,7 @@ try{
   ensureCol('publishers','total_impressions','INTEGER DEFAULT 0');
   ensureCol('publisher_withdrawals','fee','REAL DEFAULT 0');
   ensureCol('publisher_withdrawals','net_amount','REAL DEFAULT 0');
-  ensureCol('publisher_withdrawals','network','TEXT DEFAULT \'TRC20\'');
+  ensureCol('publisher_withdrawals','network',"TEXT DEFAULT 'TRC20'");
   ensureCol('publisher_withdrawals','created_at','TEXT DEFAULT CURRENT_TIMESTAMP');
   db.prepare(`CREATE TABLE IF NOT EXISTS publisher_clicks (id INTEGER PRIMARY KEY AUTOINCREMENT, pcode TEXT, publisher_id INTEGER, ad_id INTEGER, viewer_id TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`).run();
   db.prepare(`CREATE TABLE IF NOT EXISTS publisher_views (id INTEGER PRIMARY KEY AUTOINCREMENT, pcode TEXT, publisher_id INTEGER, ad_id INTEGER, viewer_id TEXT, rewarded REAL DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP)`).run();
@@ -57,7 +56,6 @@ app.post('/api/admin/login',(req,res)=>{
   res.status(401).json({error:'Wrong admin login'});
 });
 
-// ME - NOW WITH STATS + WITHDRAWALS + CLICKS
 app.get('/api/me',auth,(req,res)=>{
   const w=db.prepare('SELECT * FROM wallets WHERE user_id=?').get(req.user.id);
   const ads=db.prepare('SELECT * FROM advertisements WHERE user_id=? ORDER BY id DESC LIMIT 20').all(req.user.id);
@@ -67,13 +65,11 @@ app.get('/api/me',auth,(req,res)=>{
   const withdrawals=db.prepare('SELECT * FROM publisher_withdrawals WHERE user_id=? ORDER BY id DESC LIMIT 20').all(req.user.id);
   const active=db.prepare("SELECT COUNT(*) c FROM advertisements WHERE user_id=? AND status IN ('Approved','Published','Scheduled')").get(req.user.id).c;
   const pending=db.prepare("SELECT COUNT(*) c FROM advertisements WHERE user_id=? AND status='Awaiting Moderation'").get(req.user.id).c;
-  // Per-ad stats for publisher
   let publisher_stats=[];
   try{
     if(pubs.length){
       const ids = pubs.map(p=>p.id);
       const ph = ids.map(()=> '?').join(',');
-      // views per ad from publisher_views
       const views = db.prepare(`SELECT ad_id, COUNT(*) c FROM publisher_views WHERE publisher_id IN (${ph}) GROUP BY ad_id`).all(...ids);
       const clicks = db.prepare(`SELECT ad_id, COUNT(*) c FROM publisher_clicks WHERE publisher_id IN (${ph}) GROUP BY ad_id`).all(...ids);
       const adMap={}; ads.forEach(a=> adMap[a.id]=a);
@@ -93,18 +89,20 @@ app.get('/api/settings-public',(req,res)=>{
   const rows=db.prepare('SELECT key,value FROM settings').all(); const o={}; rows.forEach(r=> o[r.key]=r.value);
   res.json({USDT_TRC20:o.USDT_TRC20||process.env.USDT_TRC20_ADDRESS||'',USDT_ERC20:o.USDT_ERC20||process.env.USDT_ERC20_ADDRESS||'',TRC20_ENABLED:o.TRC20_ENABLED,ERC20_ENABLED:o.ERC20_ENABLED,SUPPORT_USERNAME:o.SUPPORT_USERNAME,PUBLISHER_REWARD_PER_VIEW:o.PUBLISHER_REWARD_PER_VIEW||'0.005'});
 });
+
+// --- DEPOSIT - FIXED: TX HASH OPTIONAL, ALWAYS PENDING ---
 app.post('/api/deposit',auth,upload.single('proof'),(req,res)=>{
   const {network,amount,tx_hash}=req.body;
   if(!['TRC20','ERC20'].includes(network)) return res.status(400).json({error:'Select TRC20 or ERC20'});
   const amt=parseFloat(amount); if(!amt||amt<=0) return res.status(400).json({error:'Enter valid amount'});
-  if(!tx_hash||tx_hash.length<10) return res.status(400).json({error:'Enter valid TX hash'});
-  if(db.prepare('SELECT id FROM deposits WHERE tx_hash=?').get(tx_hash.trim())) return res.status(400).json({error:'Duplicate TX hash - already used'});
+  const cleanTx = (tx_hash||'').trim() || ('PENDING-'+Date.now());
+  if(!cleanTx.startsWith('PENDING-') && db.prepare('SELECT id FROM deposits WHERE tx_hash=?').get(cleanTx)) return res.status(400).json({error:'Duplicate TX hash - already used'});
   const settings=Object.fromEntries(db.prepare('SELECT key,value FROM settings').all().map(r=>[r.key,r.value]));
   const walletAddr= network==='TRC20' ? (settings.USDT_TRC20||process.env.USDT_TRC20_ADDRESS||'') : (settings.USDT_ERC20||process.env.USDT_ERC20_ADDRESS||'');
   if(!walletAddr) return res.status(400).json({error:'Admin wallet not configured yet'});
-  const info=db.prepare('INSERT INTO deposits(user_id,network,amount,wallet_address,tx_hash,proof_path,status) VALUES(?,?,?,?,?,?,?)').run(req.user.id,network,amt,walletAddr,tx_hash.trim(),req.file?.path||'','Pending');
-  sendTelegram(process.env.ADMIN_TELEGRAM_ID, `🔔 NEW DEPOSIT #${info.lastInsertRowid}\nUser @${req.user.username||''} (${req.user.telegram_id})\n${amt} USDT ${network}\nTX: ${tx_hash}`);
-  res.json({ok:true,id:info.lastInsertRowid});
+  const info=db.prepare('INSERT INTO deposits(user_id,network,amount,wallet_address,tx_hash,proof_path,status) VALUES(?,?,?,?,?,?,?)').run(req.user.id,network,amt,walletAddr,cleanTx,req.file?.path||'','Pending');
+  sendTelegram(process.env.ADMIN_TELEGRAM_ID, `🔔 NEW DEPOSIT #${info.lastInsertRowid}\nUser @${req.user.username||''} (${req.user.telegram_id})\n${amt} USDT ${network}\nTX: ${cleanTx}`);
+  res.json({ok:true,id:info.lastInsertRowid,status:'Pending'});
 });
 app.post('/api/advertisement',auth,upload.single('media'),(req,res)=>{
   const {title,description,destination_url,category,placement,package_id,scheduled_at}=req.body;
@@ -121,12 +119,11 @@ app.post('/api/advertisement',auth,upload.single('media'),(req,res)=>{
     db.prepare('INSERT INTO transactions(user_id,type,amount,balance_after,ref_type,ref_id,note) VALUES(?,?,?,?,?,?,?)').run(req.user.id,'ad_payment',-pkg.price,w2.available,'advertisement',ad.lastInsertRowid,`Paid ${pkg.name}`);
     return ad.lastInsertRowid;
   });
-  try{ const id=trx(); sendTelegram(process.env.ADMIN_TELEGRAM_ID,`📢 NEW AD #${id} FOR MODERATION\n${title} - ${placement} - $${pkg.price}`); sendTelegram(req.user.telegram_id,`📢 Ad Submitted #${id}\nStatus: Awaiting Moderation`); res.json({ok:true,id}); }catch(e){ res.status(400).json({error:e.message}); }
+  try{ const id=trx(); sendTelegram(process.env.ADMIN_TELEGRAM_ID,`📢 NEW AD #${id} FOR MODERATION\n${title} - ${placement} - $${pkg.price}`); sendTelegram(req.user.telegram_id,`📢 Ad Submitted #${id}\nStatus: Awaiting Moderation`); res.json({ok:true,id,status:'Awaiting Moderation'}); }catch(e){ res.status(400).json({error:e.message}); }
 });
 app.get('/api/ads/published',(req,res)=>{ res.json(db.prepare("SELECT a.*, u.username FROM advertisements a LEFT JOIN users u ON u.id=a.user_id WHERE a.status='Published' ORDER BY a.published_at DESC LIMIT 30").all()); });
 app.post('/api/ads/:id/click',(req,res)=>{ try{ db.prepare('UPDATE campaigns SET clicks=clicks+1 WHERE ad_id=?').run(req.params.id); }catch(e){} res.json({ok:true}); });
 
-// ========== PUBLISHER ==========
 app.post('/api/publisher/register',auth,(req,res)=>{
   const {bot_username, mini_app_url, bot_name}=req.body;
   if(!bot_username) return res.status(400).json({error:'Enter bot username e.g. @mybot'});
@@ -138,7 +135,6 @@ app.post('/api/publisher/register',auth,(req,res)=>{
   sendTelegram(process.env.ADMIN_TELEGRAM_ID,`📢 NEW PUBLISHER #${info.lastInsertRowid}\nBot: ${bot_username}\nPass Code: ${pcode}\nApprove in Admin Dashboard.`);
   res.json({ok:true, id:info.lastInsertRowid, pcode, api_key: db.prepare('SELECT api_key FROM publishers WHERE id=?').get(info.lastInsertRowid).api_key, status:'Pending'});
 });
-// SINGLE AD (old) + MULTIPLE ADS (new for bot code)
 function getPublisherAds(pub){
   const ads=db.prepare(`SELECT * FROM advertisements WHERE status='Published' ORDER BY RANDOM() LIMIT 5`).all();
   return ads.map(ad=>({id:ad.id, title:ad.title, description:ad.description, media_path: ad.media_path ? '/'+ad.media_path : '', media_url: ad.media_path ? '/'+ad.media_path : '', media_type:ad.media_type, destination_url:ad.destination_url, category:ad.category}));
@@ -162,8 +158,8 @@ app.get('/api/publisher/ads', (req,res)=>{
   if(pub.status!=='Approved') return res.status(403).json({error:'Publisher not approved yet'});
   res.json(getPublisherAds(pub));
 });
-// VIEW = IMPRESSION + REWARD
-app.post('/api/publisher/reward', (req,res)=>{
+// VIEW / REWARD - FIXED: shared logic, both endpoints work
+function doReward(req,res){
   const {pcode, ad_id, viewer_id, api_key}=req.body;
   if(!pcode||!ad_id) return res.status(400).json({error:'Missing pcode/ad_id'});
   const pub=db.prepare('SELECT * FROM publishers WHERE pcode=?').get(pcode);
@@ -171,7 +167,7 @@ app.post('/api/publisher/reward', (req,res)=>{
   if(api_key && pub.api_key!==api_key) return res.status(401).json({error:'Invalid API key'});
   const reward=parseFloat(db.prepare("SELECT value FROM settings WHERE key='PUBLISHER_REWARD_PER_VIEW'").get()?.value || process.env.PUBLISHER_REWARD_PER_VIEW || '0.005');
   const recent=db.prepare("SELECT id FROM publisher_views WHERE pcode=? AND ad_id=? AND viewer_id=? AND created_at > datetime('now','-1 hour')").get(pcode,ad_id,viewer_id||'anon');
-  if(recent) return res.status(400).json({error:'Already rewarded for this ad recently'});
+  if(recent) return res.json({ok:true, rewarded:0, note:'Already rewarded recently'});
   const trx=db.transaction(()=>{
     db.prepare('INSERT INTO publisher_views(pcode,publisher_id,ad_id,viewer_id,rewarded) VALUES(?,?,?,?,?)').run(pcode,pub.id,ad_id,viewer_id||'anon',reward);
     db.prepare('UPDATE publishers SET total_views=total_views+1, total_impressions=total_impressions+1, total_earned=total_earned+? WHERE id=?').run(reward,pub.id);
@@ -182,10 +178,10 @@ app.post('/api/publisher/reward', (req,res)=>{
   });
   trx();
   res.json({ok:true, rewarded:reward, pcode});
-});
-app.post('/api/publisher/view', (req,res)=>{ req.body.viewer_id = req.body.viewer_id || req.body.user_id || 'anon'; return app._router.handle(req,res,()=>{}); });
-// alias view -> reward logic (simple duplicate for bot code)
-app.post('/api/publisher/view2', (req,res)=>{ res.json({ok:true}); });
+}
+app.post('/api/publisher/reward', doReward);
+app.post('/api/publisher/view', (req,res)=>{ req.body.viewer_id = req.body.viewer_id || req.body.user_id || 'anon'; return doReward(req,res); });
+app.post('/api/publisher/view2', doReward);
 app.post('/api/publisher/click', (req,res)=>{
   const {pcode, ad_id, viewer_id, api_key}=req.body;
   if(!pcode||!ad_id) return res.status(400).json({error:'Missing pcode/ad_id'});
@@ -197,7 +193,6 @@ app.post('/api/publisher/click', (req,res)=>{
   try{ db.prepare('UPDATE campaigns SET clicks=clicks+1 WHERE ad_id=?').run(ad_id); }catch(e){}
   res.json({ok:true, clicks: db.prepare('SELECT total_clicks FROM publishers WHERE id=?').get(pub.id).total_clicks});
 });
-// WITHDRAW - MIN 10 + 10% FEE
 app.post('/api/publisher/withdraw',auth,(req,res)=>{
   const {publisher_id, amount, wallet_address, network}=req.body;
   const pub=db.prepare('SELECT * FROM publishers WHERE id=? AND user_id=?').get(publisher_id, req.user.id);
@@ -217,8 +212,6 @@ app.post('/api/publisher/withdraw',auth,(req,res)=>{
   sendTelegram(process.env.ADMIN_TELEGRAM_ID, `🏧 NEW WITHDRAW\nUser @${req.user.username} Amount $${amt} Fee $${fee} Receive $${net} Network ${network} Wallet ${wallet_address}`);
   res.json({ok:true, fee, net_amount: net});
 });
-
-// ========== ADMIN ==========
 app.get('/api/admin/stats',adminAuth,(req,res)=>{
   try{
     const q=(sql)=>{ try{ const r=db.prepare(sql).get(); return r ? (r.c ?? r.s ?? 0) : 0; }catch(e){ return 0; } };
@@ -285,7 +278,6 @@ app.post('/api/admin/publisher/:id/approve',adminAuth,(req,res)=>{
 });
 app.post('/api/admin/publisher/:id/reject',adminAuth,(req,res)=>{ db.prepare("UPDATE publishers SET status='Rejected' WHERE id=?").run(req.params.id); res.json({ok:true}); });
 app.post('/api/admin/publisher/:id/suspend',adminAuth,(req,res)=>{ db.prepare("UPDATE publishers SET status='Suspended' WHERE id=?").run(req.params.id); res.json({ok:true}); });
-// WITHDRAWALS ADMIN
 app.get('/api/admin/withdrawals',adminAuth,(req,res)=>{ res.json(db.prepare('SELECT w.*, u.username, u.telegram_id, p.bot_username FROM publisher_withdrawals w LEFT JOIN users u ON u.id=w.user_id LEFT JOIN publishers p ON p.id=w.publisher_id ORDER BY w.id DESC LIMIT 100').all()); });
 app.post('/api/admin/withdrawal/:id/approve',adminAuth,(req,res)=>{ const w=db.prepare('SELECT * FROM publisher_withdrawals WHERE id=?').get(req.params.id); if(!w||w.status!=='Pending') return res.status(400).json({error:'Not pending'}); db.prepare("UPDATE publisher_withdrawals SET status='Approved' WHERE id=?").run(req.params.id); const user=db.prepare('SELECT telegram_id FROM users WHERE id=?').get(w.user_id); sendTelegram(user?.telegram_id,`✅ Withdrawal Approved #${w.id}\n$${w.amount} (Fee $${w.fee} Receive $${w.net_amount}) - Admin go send soon.`); res.json({ok:true}); });
 app.post('/api/admin/withdrawal/:id/paid',adminAuth,(req,res)=>{ db.prepare("UPDATE publisher_withdrawals SET status='Paid' WHERE id=?").run(req.params.id); const w=db.prepare('SELECT * FROM publisher_withdrawals WHERE id=?').get(req.params.id); const user=db.prepare('SELECT telegram_id FROM users WHERE id=?').get(w.user_id); sendTelegram(user?.telegram_id,`💰 Withdrawal Paid #${w.id}\n$${w.net_amount} sent to ${w.wallet_address}`); res.json({ok:true}); });
@@ -294,7 +286,6 @@ app.post('/api/admin/withdrawal/:id/reject',adminAuth,(req,res)=>{
   const trx=db.transaction(()=>{ db.prepare("UPDATE publisher_withdrawals SET status='Rejected' WHERE id=?").run(w.id); db.prepare('UPDATE wallets SET available=available+? WHERE user_id=?').run(w.amount, w.user_id); const wal=db.prepare('SELECT available FROM wallets WHERE user_id=?').get(w.user_id); db.prepare('INSERT INTO transactions(user_id,type,amount,balance_after,ref_type,ref_id,note) VALUES(?,?,?,?,?,?,?)').run(w.user_id,'withdraw_refund',w.amount,wal.available,'publisher_withdraw',w.id,'Withdrawal rejected - refunded'); });
   trx(); res.json({ok:true});
 });
-
 app.use((err,req,res,next)=>{ console.log('API ERROR',err.message); if(req.path.startsWith('/api')) return res.status(500).json({error:err.message}); next(err); });
 try{ const {bot}=require('./bot'); if(process.env.BOT_TOKEN && process.env.BOT_TOKEN!=='PLACEHOLDER') bot.launch().then(()=> console.log('Bot running')); }catch(e){ console.log('Bot fail',e.message); }
 const PORT=process.env.PORT||3000;

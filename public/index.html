@@ -1,55 +1,201 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ADS PUBLISHER</title>
-<script src="https://cdn.tailwindcss.com"></script><script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>body{background:#0B0E1A;color:white;font-family:Inter,sans-serif}.card{background:#1A1F36;border:1px solid #2A3452}.nav-active{color:#8B7CF8!important}.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1A1F36;border:1px solid #8B7CF8;padding:12px 20px;border-radius:30px;font-size:13px;font-weight:bold;z-index:9999;display:none}</style></head>
-<body class="pb-24"><div id="toast" class="toast"></div>
-<div class="flex justify-between items-center p-4"><p class="font-bold">ADS PUBLISHER 📢</p><span class="bg-[#1A1F36] text-xs px-3 py-1 rounded-full border border-[#2A3452]">USDT</span></div>
-<div id="tab-home" class="p-3">
-  <div class="card rounded-[20px] p-5 flex justify-between items-center"><div><p class="text-[11px] tracking-[2px] text-gray-400">ADVERTISING WALLET</p><h1 class="text-4xl font-black mt-1" id="balanceMain">0.00</h1><p class="text-sm text-[#00D492]">USDT Available</p></div><div class="w-16 h-16 bg-gradient-to-br from-[#8B7CF8] to-[#6B5CFF] rounded-[16px] flex items-center justify-center text-3xl">💰</div></div>
-  <div class="grid grid-cols-3 gap-2 mt-3"><div class="card rounded-[16px] py-3 text-center"><p class="text-[11px] text-gray-400">Deposited</p><p class="font-bold" id="totalDep">0</p></div><div class="card rounded-[16px] py-3 text-center"><p class="text-[11px] text-gray-400">Spent</p><p class="font-bold" id="totalSpent">0</p></div><div class="card rounded-[16px] py-3 text-center"><p class="text-[11px] text-gray-400">Active</p><p class="font-bold" id="activeCount">0</p></div></div>
-  <div class="grid grid-cols-2 gap-2 mt-3"><button onclick="switchTab('deposit')" class="bg-[#10B981] py-3 rounded-full font-bold text-sm">💰 Deposit</button><button onclick="switchTab('advertise')" class="bg-[#8B7CF8] py-3 rounded-full font-bold text-sm">📢 Create Ad</button></div>
-  <div class="card rounded-[16px] p-4 mt-3 bg-gradient-to-r from-[#FF8C00] to-[#FF5E00]"><p class="font-bold text-sm">📢 Become Publisher - Earn With Pass Code</p><p class="text-xs mt-1">Register your bot, get pXXX, show our ads in your bot, earn per view.</p><button onclick="switchTab('publisher')" class="bg-white text-black mt-2 px-4 py-2 rounded-full text-xs font-bold">Get Pass Code</button></div>
-  <p class="mt-5 mb-2 text-[11px] tracking-widest text-gray-500 font-bold">🔥 LIVE ADS</p><div id="liveAds" class="space-y-3"></div>
-  <p class="mt-5 mb-2 text-[11px] tracking-widest text-gray-500 font-bold">RECENT TRANSACTIONS</p><div id="txList" class="space-y-2"></div>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADS PUBLISHER</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:Inter,Arial,sans-serif;background:#070b1a;color:#fff;margin:0;padding:0}
+.top{background:linear-gradient(135deg,#6d28d9,#db2777,#f59e0b);padding:20px 16px 16px}
+.top h1{margin:0;font-size:24px}
+.top p{margin:6px 0 0;opacity:.9;font-size:13px}
+.wallet{background:#fff;color:#111;border-radius:20px;padding:16px;margin:-8px 16px 12px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.wallet small{color:#666;font-size:12px}
+.wallet b{font-size:32px;display:block}
+.wallet .row{display:flex;gap:8px;margin-top:12px}
+.btn{border:0;padding:12px;border-radius:12px;font-weight:800;cursor:pointer}
+.btn-pink{background:linear-gradient(90deg,#7c3aed,#db2777);color:#fff;flex:1}
+.btn-dark{background:#111;color:#fff;flex:1}
+.btn-green{background:#16a34a;color:#fff;flex:1}
+.btn-gray{background:#e5e7eb;color:#111;flex:1}
+.wrap{padding:0 16px 20px}
+.card{background:#111832;border:1px solid #26305a;border-radius:16px;padding:14px;margin-bottom:12px}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px}
+.tabs button{white-space:nowrap;background:#1e2a55;border:1px solid #2e3a6b;color:#fff;padding:9px 14px;border-radius:999px;font-weight:700}
+.tabs button.active{background:#fff;color:#111}
+input,select,textarea{width:100%;background:#0b1128;border:1px solid #2e3a6b;color:#fff;padding:11px;border-radius:12px;margin-top:8px}
+.item{background:#0b1128;border:1px solid #26305a;border-radius:14px;padding:12px;margin-top:10px}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800}
+.badge-pending{background:#f59e0b;color:#000}
+.badge-ok{background:#16a34a}
+.addr{background:#0b1128;border:1px dashed #8b5cf6;border-radius:12px;padding:10px;margin-top:8px;font-size:12px;word-break:break-all}
+.copy{background:#fff;color:#111;border:0;padding:6px 10px;border-radius:999px;font-weight:800;margin-top:6px}
+.muted{font-size:12px;opacity:.7}
+.hidden{display:none!important}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:#0b1128;border:1px solid #26305a;border-radius:14px;padding:12px;text-align:center}
+.stat b{font-size:18px;display:block}
+</style>
+</head>
+<body>
+<div class="top">
+<h1>ADS PUBLISHER</h1>
+<p>Earn • Advertise • Grow</p>
 </div>
-<div id="tab-advertise" class="hidden p-3"><h2 class="font-bold text-lg">Create Advertisement</h2>
-  <input id="adTitle" placeholder="Ad Title" class="w-full mt-3 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <textarea id="adDesc" placeholder="Description" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none"></textarea>
-  <input id="adUrl" placeholder="Destination URL https://..." class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <select id="adCategory" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm"><option>Telegram Channel Promotion</option><option>Telegram Bot Promotion</option><option>Telegram Mini App Promotion</option><option>Website Promotion</option><option>Business Promotion</option><option>Image Advertisement</option><option>Video Advertisement</option><option>Product Promotion</option></select>
-  <select id="adPlacement" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm"><option>Channel</option><option>Bot</option><option>Mini App</option><option>Publisher Bots</option></select>
-  <input id="adMedia" type="file" accept="image/*,video/mp4" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm">
-  <select id="adPackage" onchange="updatePrice()" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm"></select>
-  <div class="bg-[#151A2E] p-3 rounded-[12px] mt-3 text-sm flex justify-between"><span>Total Cost</span><b id="totalCost">$0</b></div>
-  <button onclick="submitAd()" class="bg-[#8B7CF8] w-full mt-3 py-3 rounded-full font-bold text-sm">Submit Ad - Pay From Wallet</button>
+
+<div class="wallet">
+<small>💰 TOTAL BALANCE</small>
+<b id="bal">$0.00</b>
+<small id="uname">@user • ID —</small>
+<div class="row">
+<button class="btn btn-pink" onclick="showTab('deposit')">💰 Deposit</button>
+<button class="btn btn-dark" onclick="showTab('withdraw')">🏧 Withdraw</button>
 </div>
-<div id="tab-deposit" class="hidden p-3"><h2 class="font-bold text-lg">Deposit USDT</h2><p class="text-xs text-gray-400">Manual - Admin must confirm. No auto credit.</p>
-  <div class="grid grid-cols-2 gap-2 mt-3"><button id="btnTRC" onclick="selectNet('TRC20')" class="bg-[#8B7CF8] p-3 rounded-[12px] text-sm font-bold">USDT TRC20</button><button id="btnERC" onclick="selectNet('ERC20')" class="bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm font-bold">USDT ERC20</button></div>
-  <input id="depAmount" type="number" placeholder="Amount USDT" class="w-full mt-3 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <div class="bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] mt-3"><p class="text-[11px] text-gray-400">Send to admin wallet (<span id="depNetLabel">TRC20</span>):</p><p id="walletAddr" class="text-xs break-all mt-1 font-mono">Loading...</p><button onclick="copyWallet()" class="bg-[#8B7CF8] mt-2 px-4 py-2 rounded-full text-xs font-bold">Copy Address</button></div>
-  <input id="depTx" placeholder="Transaction Hash (TXID)" class="w-full mt-3 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <input id="depProof" type="file" accept="image/*" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm">
-  <button onclick="submitDeposit()" class="bg-[#10B981] w-full mt-3 py-3 rounded-full font-bold text-sm">Submit Deposit Request</button><div id="myDeposits" class="mt-4 space-y-2"></div>
+<div class="row">
+<button class="btn btn-green" onclick="showTab('create')">📢 Create Ad</button>
+<button class="btn btn-gray" onclick="showTab('publisher')">🤖 Publisher</button>
 </div>
-<div id="tab-campaigns" class="hidden p-3"><h2 class="font-bold text-lg">My Campaigns</h2><div id="myAds" class="space-y-3 mt-3"></div></div>
-<div id="tab-publisher" class="hidden p-3">
-  <h2 class="font-bold text-lg">📢 Publisher - Get Pass Code</h2><p class="text-xs text-gray-400 mt-1">Register your bot, get pXXX, paste SDK, earn $<span id="pubReward">0.005</span> per view.</p>
-  <input id="pubBot" placeholder="Bot Username @mybot" class="w-full mt-3 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <input id="pubName" placeholder="Bot Name" class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <input id="pubUrl" placeholder="Mini App URL https://..." class="w-full mt-2 bg-[#0B0E1A] border border-[#2A3452] p-3 rounded-[12px] text-sm outline-none">
-  <button onclick="registerPublisher()" class="bg-[#FF8C00] w-full mt-3 py-3 rounded-full font-bold text-sm">Register - Generate Pass Code</button>
-  <div id="myPublishers" class="space-y-3 mt-4"></div>
 </div>
-<div id="tab-account" class="hidden p-3">
-  <div class="card rounded-[20px] p-4"><p class="font-bold" id="userName">Loading...</p><p class="text-xs text-gray-400" id="userHandle">@user</p><p class="text-xs mt-1">ID: <span id="userId"></span></p></div>
-  <div class="card rounded-[16px] p-4 mt-3"><p class="font-bold text-sm">Wallet</p><p class="text-2xl font-black mt-1">$<span id="balAcc">0.00</span></p><p class="text-xs text-gray-400">Deposited $<span id="depAcc">0</span> | Spent $<span id="spentAcc">0</span> | Earned $<span id="earnAcc">0</span> | Refunded $<span id="refAcc">0</span></p></div>
-  <div class="card rounded-[16px] p-4 mt-3"><p class="font-bold text-sm">Transaction History</p><div id="txFull" class="mt-2 text-xs space-y-2"></div></div>
+
+<div class="wrap">
+<div class="grid">
+<div class="stat"><span>📢 Active Ads</span><b id="statActive">0</b></div>
+<div class="stat"><span>⏳ Pending</span><b id="statPending">0</b></div>
 </div>
-<div class="fixed bottom-0 left-0 right-0 bg-[#151A2E] border-t border-[#2A3452] flex justify-around py-2 z-30">
-  <button onclick="switchTab('home')" id="nav-home" class="nav-active flex flex-col items-center text-[10px] w-1/6"><span>🏠</span><span>Home</span></button>
-  <button onclick="switchTab('advertise')" id="nav-advertise" class="flex flex-col items-center text-[10px] text-gray-500 w-1/6"><span>📢</span><span>Advertise</span></button>
-  <button onclick="switchTab('deposit')" id="nav-deposit" class="flex flex-col items-center text-[10px] text-gray-500 w-1/6"><span>💰</span><span>Deposit</span></button>
-  <button onclick="switchTab('campaigns')" id="nav-campaigns" class="flex flex-col items-center text-[10px] text-gray-500 w-1/6"><span>📊</span><span>Campaigns</span></button>
-  <button onclick="switchTab('publisher')" id="nav-publisher" class="flex flex-col items-center text-[10px] text-gray-500 w-1/6"><span>🔑</span><span>Publisher</span></button>
-  <button onclick="switchTab('account')" id="nav-account" class="flex flex-col items-center text-[10px] text-gray-500 w-1/6"><span>👤</span><span>Account</span></button>
+
+<div class="tabs">
+<button class="active" onclick="showTab('home',this)">🏠 Home</button>
+<button onclick="showTab('deposit',this)">💰 Deposit</button>
+<button onclick="showTab('withdraw',this)">🏧 Withdraw</button>
+<button onclick="showTab('create',this)">📢 Create Ad</button>
+<button onclick="showTab('myads',this)">📋 My Ads</button>
+<button onclick="showTab('publisher',this)">🤖 Publisher</button>
+<button onclick="showTab('history',this)">🧾 History</button>
 </div>
-<script src="app.js"></script></body></html>
+
+<div id="tab-home" class="card">
+<h3 style="margin:0">🔥 How it works</h3>
+<p class="muted">1. Deposit USDT → 2. Create Ad → 3. Admin approve → 4. Your ad go live for channel + publisher bots. Publishers earn per view, withdraw anytime.</p>
+<h3>💳 Deposit Addresses</h3>
+<div class="addr"><b>TRC20 (TRON) — USDT</b><br>TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd<br><button class="copy" onclick="copyTxt('TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd')">📋 Copy TRC20</button></div>
+<div class="addr"><b>ERC20 (ETH) — USDT</b><br>0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d<br><button class="copy" onclick="copyTxt('0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d')">📋 Copy ERC20</button></div>
+<p class="muted">⚠️ Send only USDT to correct network. Send proof + TX hash for deposit tab.</p>
+<div id="homeAds"></div>
+</div>
+
+<div id="tab-deposit" class="card hidden">
+<h3>💰 Deposit USDT</h3>
+<div class="addr"><b>TRC20</b><br>TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd<br><button class="copy" onclick="copyTxt('TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd')">📋 Copy</button></div>
+<div class="addr"><b>ERC20</b><br>0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d<br><button class="copy" onclick="copyTxt('0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d')">📋 Copy</button></div>
+<select id="depNetwork"><option value="TRC20">TRC20 — TRON (Low fee)</option><option value="ERC20">ERC20 — Ethereum</option></select>
+<input id="depAmount" type="number" placeholder="Amount USDT e.g. 10">
+<input id="depTx" placeholder="TX Hash / Transaction ID">
+<label class="muted">Proof screenshot (optional)</label>
+<input id="depProof" type="file" accept="image/*">
+<button class="btn btn-pink" style="width:100%;margin-top:10px" onclick="doDeposit()">✅ Submit Deposit</button>
+<p class="muted">Admin go confirm after e see money for wallet above.</p>
+<div id="depList"></div>
+</div>
+
+<div id="tab-withdraw" class="card hidden">
+<h3>🏧 Withdraw Earnings</h3>
+<p class="muted">Min $1. Money go come to your USDT wallet. Choose network.</p>
+<select id="wdNetwork"><option value="TRC20">TRC20 — TRON</option><option value="ERC20">ERC20 — Ethereum</option></select>
+<input id="wdAmount" type="number" placeholder="Amount to withdraw e.g. 5">
+<input id="wdAddress" placeholder="Your USDT wallet address">
+<input id="wdPubId" type="hidden">
+<div id="wdPubList"></div>
+<button class="btn btn-dark" style="width:100%;margin-top:10px" onclick="doWithdraw()">🏧 Request Withdrawal</button>
+<p class="muted">If you no get publisher yet, register publisher first for Publisher tab.</p>
+</div>
+
+<div id="tab-create" class="card hidden">
+<h3>📢 Create New Ad</h3>
+<input id="adTitle" placeholder="Ad Title e.g. Best Crypto Exchange">
+<textarea id="adDesc" placeholder="Description"></textarea>
+<input id="adUrl" placeholder="https://yourlink.com">
+<select id="adCat"><option>General</option><option>Crypto</option><option>Betting</option><option>Shop</option><option>Telegram</option></select>
+<select id="adPlacement"><option value="Channel">Channel</option><option value="Mini App">Mini App</option><option value="Publisher Bots">Publisher Bots</option><option value="All">All Placements</option></select>
+<div id="pkgList"></div>
+<label class="muted">Media (image/video)</label>
+<input id="adMedia" type="file" accept="image/*,video/*">
+<button class="btn btn-pink" style="width:100%;margin-top:10px" onclick="createAd()">🚀 Submit Ad — Pay from Balance</button>
+</div>
+
+<div id="tab-myads" class="card hidden"><h3>📋 My Ads</h3><div id="myAds"></div></div>
+
+<div id="tab-publisher" class="card hidden">
+<h3>🤖 Become Publisher — Earn Per View</h3>
+<p class="muted">Register your bot, admin approve, you get Pass Code (pcode) + API Key. Paste SDK for your bot, earn $0.005 per view.</p>
+<input id="pubBot" placeholder="Bot username e.g. @mybot">
+<input id="pubName" placeholder="Bot Name">
+<input id="pubUrl" placeholder="Mini App URL (optional)">
+<button class="btn btn-pink" style="width:100%;margin-top:10px" onclick="regPublisher()">🤖 Register Publisher Bot</button>
+<div id="pubList"></div>
+</div>
+
+<div id="tab-history" class="card hidden"><h3>🧾 Transactions</h3><div id="txList"></div></div>
+</div>
+
+<script>
+const tg=window.Telegram.WebApp; tg.ready(); tg.expand();
+let me=null, selectedPkg=null;
+function copyTxt(t){ navigator.clipboard.writeText(t); tg.HapticFeedback?.notificationOccurred('success'); alert('Copied: '+t); }
+function showTab(id,btn){
+  ['home','deposit','withdraw','create','myads','publisher','history'].forEach(x=> document.getElementById('tab-'+x).classList.toggle('hidden',x!==id));
+  if(btn){ document.querySelectorAll('.tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+  if(id==='withdraw') loadMe();
+}
+function hdrs(){ return {'Content-Type':'application/json','x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})} }
+async function loadMe(){
+  try{
+    const r=await fetch('/api/me',{headers:hdrs()}); const d=await r.json();
+    me=d; document.getElementById('bal').textContent='$'+(d.wallet?.available||0).toFixed(2);
+    document.getElementById('uname').textContent='@'+(d.user?.username||'')+' • ID '+d.user?.telegram_id;
+    document.getElementById('statActive').textContent=d.active||0;
+    document.getElementById('statPending').textContent=d.pending||0;
+    document.getElementById('myAds').innerHTML=(d.ads||[]).map(a=>`<div class="item"><b>#${a.id} ${a.title}</b> <span class="badge ${a.status==='Published'?'badge-ok':'badge-pending'}">${a.status}</span><br><span class="muted">$${a.price} • ${a.placement} • ${a.destination_url}</span></div>`).join('')||'No ads yet';
+    document.getElementById('depList').innerHTML='<h4>Your Deposits</h4>'+(d.deposits||[]).map(x=>`<div class="item"><b>${x.amount} USDT ${x.network}</b> <span class="badge ${x.status==='Confirmed'?'badge-ok':'badge-pending'}">${x.status}</span><br><span class="muted">TX: ${x.tx_hash}</span></div>`).join('')||'No deposits';
+    document.getElementById('pubList').innerHTML=(d.publishers||[]).map(p=>`<div class="item"><b>${p.bot_username}</b> <span class="badge badge-pending">${p.status}</span><br><span class="muted">Pass Code: <b>${p.pcode}</b> • Earned: $${p.total_earned||0} • Views: ${p.total_views||0}</span><br><button class="copy" onclick="copyTxt('${p.pcode}')">Copy Pass Code</button> <button class="copy" onclick="copyTxt('${p.api_key}')">Copy API Key</button></div>`).join('')||'No publisher yet';
+    document.getElementById('wdPubList').innerHTML=(d.publishers||[]).map(p=>`<div class="item" onclick="document.getElementById('wdPubId').value='${p.id}';alert('Selected ${p.bot_username} for withdraw')"><b>${p.bot_username} — ${p.pcode}</b><br><span class="muted">Tap to select this publisher for withdraw • Balance: $${d.wallet?.available||0}</span></div>`).join('')||'';
+    if(d.publishers?.[0]) document.getElementById('wdPubId').value=d.publishers[0].id;
+    document.getElementById('txList').innerHTML=(d.txs||[]).map(t=>`<div class="item"><b>${t.type}</b> <span class="muted">${t.amount>0?'+':''}${t.amount} USDT</span><br><span class="muted">Balance after: $${t.balance_after} • ${t.note||''}</span></div>`).join('')||'No transactions';
+  }catch(e){ console.log(e); }
+}
+async function loadPkgs(){
+  const r=await fetch('/api/packages'); const pkgs=await r.json();
+  document.getElementById('pkgList').innerHTML='<label>Choose Package</label>'+pkgs.map(p=>`<div class="item" onclick="selectedPkg=${p.id};document.querySelectorAll('#pkgList .item').forEach(e=>e.style.borderColor='#26305a');this.style.borderColor='#db2777'"><b>${p.name}</b> — $${p.price}<br><span class="muted">${p.placement} • ${p.duration_days} days</span></div>`).join('');
+  if(pkgs[0]) selectedPkg=pkgs[0].id;
+}
+async function doDeposit(){
+  const fd=new FormData(); fd.append('network',document.getElementById('depNetwork').value); fd.append('amount',document.getElementById('depAmount').value); fd.append('tx_hash',document.getElementById('depTx').value);
+  const f=document.getElementById('depProof').files[0]; if(f) fd.append('proof',f);
+  const r=await fetch('/api/deposit',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
+  const d=await r.json(); alert(d.ok?'✅ Deposit submitted! Wait admin confirm':(d.error||'Failed')); if(d.ok) loadMe();
+}
+async function doWithdraw(){
+  const pid=document.getElementById('wdPubId').value;
+  if(!pid) return alert('Select publisher first — register publisher or tap one for list');
+  const body={publisher_id:pid,amount:document.getElementById('wdAmount').value,wallet_address:document.getElementById('wdAddress').value,network:document.getElementById('wdNetwork').value};
+  if(!body.amount||!body.wallet_address) return alert('Enter amount + your wallet address');
+  const r=await fetch('/api/publisher/withdraw',{method:'POST',headers:hdrs(),body:JSON.stringify(body)});
+  const d=await r.json(); alert(d.ok?'✅ Withdraw requested! Admin go send soon':(d.error||'Failed')); if(d.ok) loadMe();
+}
+async function createAd(){
+  const fd=new FormData(); fd.append('title',document.getElementById('adTitle').value); fd.append('description',document.getElementById('adDesc').value); fd.append('destination_url',document.getElementById('adUrl').value); fd.append('category',document.getElementById('adCat').value); fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
+  const f=document.getElementById('adMedia').files[0]; if(f) fd.append('media',f);
+  const r=await fetch('/api/advertisement',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
+  const d=await r.json(); alert(d.ok?'✅ Ad submitted! Awaiting moderation':(d.error||'Failed')); if(d.ok){ loadMe(); showTab('myads'); }
+}
+async function regPublisher(){
+  const body={bot_username:document.getElementById('pubBot').value,bot_name:document.getElementById('pubName').value,mini_app_url:document.getElementById('pubUrl').value};
+  const r=await fetch('/api/publisher/register',{method:'POST',headers:hdrs(),body:JSON.stringify(body)});
+  const d=await r.json(); alert(d.ok?`✅ Registered! Pass Code: ${d.pcode} — Wait admin approve`:(d.error||'Failed')); if(d.ok) loadMe();
+}
+loadMe(); loadPkgs();
+fetch('/api/ads/published').then(r=>r.json()).then(ads=>{ document.getElementById('homeAds').innerHTML='<h3>🔥 Live Ads</h3>'+ads.slice(0,5).map(a=>`<div class="item"><b>${a.title}</b><br><span class="muted">${a.description||''}</span><br><a href="${a.destination_url}" style="color:#f472b6">👉 Visit →</a></div>`).join('')||'No live ads yet'; });
+</script>
+</body>
+</html>

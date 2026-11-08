@@ -101,7 +101,7 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 <div class="card"><h3 style="margin:0">Select Network</h3><div class="row" style="margin-top:10px"><div class="net selected" id="netTRC20" onclick="selectNet('TRC20')"><b>₮ USDT TRC20</b><br><small>TRON • Low fee</small></div><div class="net" id="netERC20" onclick="selectNet('ERC20')"><b>₮ USDT ERC20</b><br><small>Ethereum</small></div></div>
 <div class="addr"><b id="depAddrLabel">USDT TRC20 — Receiving Address</b><br><span id="depAddr">TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd</span><br><button class="btn btn-light" style="margin-top:8px;padding:9px" onclick="copyCurrentAddr()">📋 Copy Address</button></div>
 <label>Deposit Amount (USDT)</label><input id="depAmount" type="number" placeholder="e.g. 10">
-<label>Transaction Hash</label><input id="depTx" placeholder="TX Hash">
+<label>Transaction Hash <span class="muted">(Optional — leave empty if you no get am yet)</span></label><input id="depTx" placeholder="TX Hash (optional)">
 <label>Upload Payment Screenshot</label><input id="depProof" type="file" accept="image/*">
 <button class="btn btn-blue" style="margin-top:12px" onclick="doDeposit()">✅ Submit Deposit</button></div>
 <div class="card"><h3 style="margin:0">Recent Deposits</h3><div id="depList"></div></div>
@@ -201,10 +201,17 @@ function selectPkg(id,price,name,el){ selectedPkg=id; document.getElementById('p
 function setFilter(f){ filter=f; ['fAll','fPending','fReviewed'].forEach(id=>document.getElementById(id).classList.remove('active')); document.getElementById(f==='all'?'fAll':f==='pending'?'fPending':'fReviewed').classList.add('active'); renderMod(); }
 function badgeFor(s){
   if(s==='Awaiting Moderation') return '<span class="badge b-pending">🟠 Pending Moderation</span>';
+  if(s==='Pending') return '<span class="badge b-pending">🟠 Pending</span>';
   if(s==='Approved') return '<span class="badge b-ok">🟢 Approved</span>';
   if(s==='Published') return '<span class="badge b-ok">🟢 Approved • Published</span>';
   if(s==='Rejected') return '<span class="badge b-red">🔴 Rejected</span>';
+  if(s==='Suspended') return '<span class="badge b-red">⏸️ Suspended</span>';
   return '<span class="badge b-review">🔵 Under Review</span>';
+}
+function badgeForDep(s){
+  if(s==='Confirmed') return '<span class="badge b-ok">Confirmed</span>';
+  if(s==='Rejected') return '<span class="badge b-red">Rejected</span>';
+  return '<span class="badge b-pending">Pending</span>';
 }
 function renderCats(){ document.getElementById('catList').innerHTML=CATS.map(c=>`<div class="cat ${selectedCat===c.n?'selected':''}" onclick="selectedCat='${c.n}';document.getElementById('adCat').value='${c.n}';renderCats()"><div class="ic">${c.i}</div><div style="flex:1"><b>${c.n}</b><p>${c.d}</p></div><span style="color:#2563eb;font-weight:800">Select ›</span></div>`).join(''); }
 function renderMod(){
@@ -256,7 +263,7 @@ async function loadMe(){
     const ads=DATA.ads||[]; document.getElementById('sTotal').textContent=ads.length; document.getElementById('sActive').textContent=DATA.active||0; document.getElementById('sPending').textContent=DATA.pending||0; document.getElementById('sPub').textContent=ads.filter(a=>a.status==='Published').length;
     document.getElementById('mTotal').textContent=ads.length; document.getElementById('mPending').textContent=ads.filter(a=>a.status==='Awaiting Moderation').length; document.getElementById('mApproved').textContent=ads.filter(a=>a.status==='Approved'||a.status==='Published').length; document.getElementById('mRejected').textContent=ads.filter(a=>a.status==='Rejected').length;
     document.getElementById('recent').innerHTML=[...deps.slice(0,3).map(d=>`<div class="list"><div class="ic">💰</div><div><b>Deposit ${d.status}</b><p>${d.amount} USDT ${d.network}</p></div></div>`),...ads.slice(0,3).map(a=>`<div class="list" onclick="openDetail(${a.id})"><div class="ic">📢</div><div><b>${a.title}</b><p>Submitted • $${a.price}</p></div></div>`)].join('')||'No recent activity yet';
-    document.getElementById('depList').innerHTML=deps.map(d=>`<div class="item"><b>${d.amount} USDT ${d.network}</b> ${d.status==='Confirmed'?'<span class="badge b-ok">Confirmed</span>':d.status==='Rejected'?'<span class="badge b-red">Rejected</span>':'<span class="badge b-pending">Pending</span>'}<br><span class="muted">TX: ${d.tx_hash}</span></div>`).join('')||'No deposits yet';
+    document.getElementById('depList').innerHTML=deps.map(d=>`<div class="item"><b>${d.amount} USDT ${d.network}</b> ${badgeForDep(d.status)}<br><span class="muted">TX: ${d.tx_hash}</span></div>`).join('')||'No deposits yet';
     const pubHtml=(DATA.publishers||[]).map(p=>`<div class="item"><b>${p.bot_username}</b> ${badgeFor(p.status)}<br><span class="muted">Pass: <b>${p.pcode}</b> • Earned $${p.total_earned||0} • 👁️ ${p.total_views||0} • 🖱️ ${p.total_clicks||0}</span><br><button class="btn btn-light" style="padding:8px;margin-top:6px" onclick="copyTxt('${p.api_key}')">Copy API Key</button></div>`).join('')||'No publisher yet — register below';
     document.getElementById('pubList').innerHTML=pubHtml;
     document.getElementById('pubHome').innerHTML=(DATA.publishers||[]).length? `<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:10px;margin-top:10px">${(DATA.publishers||[]).map(p=>p.bot_username+' — '+p.pcode+' • '+p.status).join('<br>')}</div>` : '';
@@ -278,8 +285,60 @@ async function loadPkgs(){ try{ const r=await fetch('/api/packages'); const pkgs
 function confirmWithdraw(){ const amt=parseFloat(document.getElementById('wdAmount').value||0); const addr=document.getElementById('wdAddress').value.trim(); if(!amt||amt<10) return alert('❌ Minimum withdrawal is 10 USDT. You entered $'+amt); if(!addr) return alert('Enter your USDT wallet address'); if(amt>(DATA?.wallet?.available||0)) return alert('Insufficient balance'); const fee=amt*0.10; const rec=amt-fee; document.getElementById('wdConfirmText').innerHTML=`<p><b>Amount:</b> $${amt}</p><p><b>Network:</b> USDT ${wdNet}</p><p><b>Wallet:</b> ${addr.slice(0,6)}...${addr.slice(-4)}</p><p><b>Fee (10%):</b> $${fee.toFixed(2)}</p><p><b>You will receive:</b> $${rec.toFixed(2)}</p><p class="muted">Admin will approve manually and send payment.</p>`; document.getElementById('wdModal').classList.remove('hidden'); }
 function closeWdModal(){ document.getElementById('wdModal').classList.add('hidden'); }
 async function submitWithdraw(){ closeWdModal(); let pid=document.getElementById('wdPubId').value; if(!pid){ const u=tg.initDataUnsafe?.user||{}; const reg=await fetch('/api/publisher/register',{method:'POST',headers:hdrs(),body:JSON.stringify({bot_username:'@'+(u.username||'user'+u.id),bot_name:'Withdraw Wallet',mini_app_url:''})}); const rd=await reg.json(); if(rd.id) pid=rd.id; else return alert(rd.error||'Please register publisher first'); } const body={publisher_id:pid,amount:document.getElementById('wdAmount').value,wallet_address:document.getElementById('wdAddress').value,network:wdNet}; const r=await fetch('/api/publisher/withdraw',{method:'POST',headers:hdrs(),body:JSON.stringify(body)}); const d=await r.json(); alert(d.ok?'✅ Withdrawal Request Submitted! Status: Pending':('❌ '+(d.error||'Failed'))); if(d.ok) loadMe(); }
-async function doDeposit(){ const fd=new FormData(); fd.append('network',depNet); fd.append('amount',document.getElementById('depAmount').value); fd.append('tx_hash',document.getElementById('depTx').value); const f=document.getElementById('depProof').files[0]; if(f) fd.append('proof',f); const r=await fetch('/api/deposit',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd}); const d=await r.json(); alert(d.ok?'✅ Deposit submitted! Status: Pending':(d.error||'Failed')); if(d.ok) loadMe(); }
-async function createAd(){ if(!selectedPkg) return alert('Select a package first'); const fd=new FormData(); fd.append('title',document.getElementById('adTitle').value); fd.append('description',document.getElementById('adDesc').value); fd.append('destination_url',document.getElementById('adUrl').value); fd.append('category',document.getElementById('adCat').value); fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg); const f=document.getElementById('adMedia').files[0]; if(f) fd.append('media',f); const r=await fetch('/api/advertisement',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd}); const d=await r.json(); alert(d.ok?'✅ Your advertisement has been submitted successfully and is awaiting moderation.':(d.error||'Failed')); if(d.ok){ loadMe(); showPage('moderation'); } }
+
+// --- FIXED: DEPOSIT -> PENDING IMMEDIATELY ---
+async function doDeposit(){
+  const amt = document.getElementById('depAmount').value;
+  const tx = document.getElementById('depTx').value.trim();
+  if(!amt || parseFloat(amt)<=0) return alert('Enter Deposit Amount e.g. 200');
+  const fd=new FormData();
+  fd.append('network',depNet);
+  fd.append('amount',amt);
+  fd.append('tx_hash',tx);
+  const f=document.getElementById('depProof').files[0];
+  if(f) fd.append('proof',f);
+  try{
+    const r=await fetch('/api/deposit',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
+    const d=await r.json();
+    if(d.ok){
+      alert('✅ Deposit submitted! Status: PENDING — Wait for admin confirmation');
+      const list=document.getElementById('depList');
+      const item=document.createElement('div'); item.className='item';
+      item.innerHTML=`<b>${amt} USDT ${depNet}</b> <span class="badge b-pending">Pending</span><br><span class="muted">TX: ${tx||'Pending'} • Just now</span>`;
+      if(list) list.prepend(item);
+      document.getElementById('depAmount').value=''; document.getElementById('depTx').value=''; document.getElementById('depProof').value='';
+      loadMe(); showPage('deposit');
+    } else alert('❌ '+(d.error||'Failed'));
+  }catch(e){ alert('❌ Network error, try again'); }
+}
+
+// --- FIXED: AD -> MODERATION / PENDING IMMEDIATELY ---
+async function createAd(){
+  if(!selectedPkg) return alert('Select a package first');
+  const title=document.getElementById('adTitle').value.trim();
+  const url=document.getElementById('adUrl').value.trim();
+  if(!title) return alert('Enter Advertisement Title');
+  if(!url) return alert('Enter Destination URL e.g. https://yourlink.com');
+  const fd=new FormData();
+  fd.append('title',title); fd.append('description',document.getElementById('adDesc').value);
+  fd.append('destination_url',url); fd.append('category',document.getElementById('adCat').value);
+  fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
+  const f=document.getElementById('adMedia').files[0]; if(f) fd.append('media',f);
+  try{
+    const r=await fetch('/api/advertisement',{method:'POST',headers:{'x-telegram-initdata':tg.initData,'x-telegram-user':JSON.stringify(tg.initDataUnsafe?.user||{})},body:fd});
+    const d=await r.json();
+    if(d.ok){
+      alert('✅ Your advertisement has been submitted successfully and is awaiting moderation.');
+      const priceTxt=document.getElementById('pkgPrice').textContent||'$0';
+      const list=document.getElementById('modList');
+      const item=document.createElement('div'); item.className='item';
+      item.innerHTML=`<div style="display:flex;gap:10px"><div style="width:64px;height:64px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:28px">📢</div><div style="flex:1"><b>${title}</b><br><span class="muted">${document.getElementById('adCat').value} • Just now</span><br><span class="muted">Paid: ${priceTxt}</span><br><span class="badge b-pending">🟠 Pending Moderation</span></div></div>`;
+      if(list) list.prepend(item);
+      document.getElementById('adTitle').value=''; document.getElementById('adDesc').value=''; document.getElementById('adUrl').value=''; document.getElementById('adMedia').value='';
+      loadMe(); showPage('moderation');
+    } else alert('❌ '+(d.error||'Failed - Check balance. Deposit first if balance low.'));
+  }catch(e){ alert('❌ Network error, try again'); }
+}
 async function regPublisher(){ const body={bot_username:document.getElementById('pubBot').value,bot_name:document.getElementById('pubName').value,mini_app_url:document.getElementById('pubUrl')?.value||''}; const r=await fetch('/api/publisher/register',{method:'POST',headers:hdrs(),body:JSON.stringify(body)}); const d=await r.json(); alert(d.ok?`✅ Registered! Pass Code: ${d.pcode}`:(d.error||'Failed')); if(d.ok) loadMe(); }
 renderCats(); loadMe(); loadPkgs();
 </script>

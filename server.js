@@ -84,7 +84,44 @@ app.get('/api/settings-public', async(req,res)=>{
 });
 app.get('/ads.js',(req,res)=>{
   res.setHeader('Content-Type','application/javascript');
-  res.send(`(function(){window.showAdsPublisher=function(){return fetch('/api/publisher/ads?pcode='+encodeURIComponent(document.currentScript?.dataset?.pcode||'' )).then(r=>r.json()).then(j=>{ if(j && j.length) { window.dispatchEvent(new CustomEvent('adsPublisherAd',{detail:j[0]})); return {request_id:'req_'+Date.now(), ad:j[0]}; } throw {code:'NO_ADS', message:'No ads available'}; });}; window.showAdsGalaxy=window.showAdsPublisher; })();`);
+  res.send(`
+(function(){
+  var PCODE = document.currentScript ? document.currentScript.dataset.pcode : 'p1';
+  var APIKEY = document.currentScript ? document.currentScript.dataset.apiKey : '';
+  window._adsPublisherPcode = PCODE;
+  window._adsPublisherKey = APIKEY;
+  window.showAdsPublisher = function(){
+    var pcode = window._adsPublisherPcode || 'p1';
+    var api_key = window._adsPublisherKey || '';
+    return fetch('https://ads-publisher.onrender.com/api/publisher/ads?pcode='+encodeURIComponent(pcode)+'&api_key='+encodeURIComponent(api_key))
+      .then(r=>r.json()).then(function(j){
+        if(!j || !j.length) { alert('No ads available now, try later'); throw {code:'NO_ADS'}; }
+        var ad = j[0];
+        var old = document.getElementById('adsPublisherOverlay');
+        if(old) old.remove();
+        var ov = document.createElement('div');
+        ov.id = 'adsPublisherOverlay';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+        ov.innerHTML = '<div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px;text-align:center;color:#111">'
+          + '<h3 style="font-weight:900;font-size:18px">'+(ad.title||'Sponsored Ad')+'</h3>'
+          + '<p style="font-size:13px;color:#555;margin:10px 0">'+(ad.description||'')+'</p>'
+          + (ad.media_path ? '<img src="https://ads-publisher.onrender.com'+ad.media_path+'" style="width:100%;border-radius:12px;max-height:220px;object-fit:cover"/>' : '')
+          + '<a href="'+ad.destination_url+'" target="_blank" style="display:block;background:#FFD700;color:#000;padding:14px;border-radius:12px;font-weight:900;margin-top:14px;text-decoration:none">👉 VISIT AD</a>'
+          + '<button id="adsPubClose" style="margin-top:10px;background:#eee;border:0;padding:10px 20px;border-radius:20px;font-weight:800">Close & Claim +$0.005</button>'
+          + '<p style="font-size:11px;color:#999;margin-top:10px">Ads by Ads Publisher</p></div>';
+        document.body.appendChild(ov);
+        document.getElementById('adsPubClose').onclick = function(){
+          ov.remove();
+          fetch('https://ads-publisher.onrender.com/api/publisher/view',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pcode:pcode,api_key:api_key,ad_id:ad.id,viewer_id: window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('uid') || 'anon'})}).catch(()=>{});
+          if(window.onAdsPublisherReward) window.onAdsPublisherReward({ad_id:ad.id, reward:0.005});
+          window.dispatchEvent(new CustomEvent('adsPublisherAd',{detail:ad}));
+        };
+        return {request_id:'req_'+Date.now(), ad:ad};
+      });
+  };
+  window.showAdsGalaxy = window.showAdsPublisher;
+})();
+  `);
 });
 
 app.post('/api/deposit',auth,upload.single('proof'), async(req,res)=>{
@@ -144,7 +181,7 @@ app.post('/api/publisher/register',auth, async(req,res)=>{
   }catch(e){ res.status(500).json({error:e.message}); }
 });
 async function getPublisherAds(){
-  const ads=await Advertisement.find({status:'Published'}).sort({created_at:-1}).limit(5);
+  const ads=await Advertisement.find({status:{$in:['Approved','Published']}}).sort({created_at:-1}).limit(5);
   return ads.map(ad=>({id:ad.id, title:ad.title, description:ad.description, media_path: ad.media_path ? '/'+ad.media_path : '', media_url: ad.media_path ? '/'+ad.media_path : '', media_type:ad.media_type, destination_url:ad.destination_url, category:ad.category}));
 }
 app.get('/api/publisher/ad', async(req,res)=>{

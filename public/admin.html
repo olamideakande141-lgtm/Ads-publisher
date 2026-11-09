@@ -1,100 +1,65 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADS PUBLISHER - Admin</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-*{box-sizing:border-box} body{font-family:Inter,Arial,sans-serif;background:#0f172a;color:#fff;margin:0;padding:16px;padding-bottom:30px}
-h1{font-size:20px;margin:0 0 4px} .muted{font-size:12px;opacity:.7}
-.card{background:#1e293b;padding:14px;border-radius:14px;margin-bottom:12px}
-button{background:#22c55e;border:0;padding:11px 14px;border-radius:10px;color:#fff;font-weight:800;width:100%;margin-top:8px;cursor:pointer}
-button.small{width:auto;padding:7px 11px;margin:6px 6px 0 0;font-size:13px} button.danger{background:#ef4444} button.blue{background:#3b82f6} button.gray{background:#475569} button.orange{background:#f59e0b}
-input{width:100%;padding:11px;border-radius:10px;border:0;margin-top:8px;background:#0f172a;color:#fff}
-.tab{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap} .tab button{background:#334155;width:auto;padding:9px 13px;margin:0} .tab button.active{background:#22c55e}
-.item{background:#0f172a;padding:12px;border-radius:10px;margin-top:8px;font-size:14px;line-height:1.5}
-.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px} .stat div{background:#0f172a;padding:12px;border-radius:10px;text-align:center} .stat b{font-size:18px;display:block}
-.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800}
-.b-pending{background:#fef3c7;color:#92400e}.b-ok{background:#dcfce7;color:#166534}.b-red{background:#fee2e2;color:#991b1b}.b-blue{background:#dbeafe;color:#1e40af}
-code{background:#0f172a;padding:2px 6px;border-radius:6px;font-size:12px}
-</style>
-</head>
-<body>
-<h1>🛡️ ADS PUBLISHER ADMIN</h1><p class="muted">Approve Ads • Deposits • Publishers • Withdrawals • Publish Addresses</p>
-<div id="loginBox" class="card"><b>Admin Login</b><input id="username" placeholder="ADMIN_USERNAME" /><input id="password" type="password" placeholder="ADMIN_PASSWORD" /><button onclick="login()">Login</button><button class="gray" onclick="clearAll()">Clear Saved Session</button></div>
-<div id="dash" style="display:none">
-<div class="card"><div class="stat" id="stats"></div><button onclick="loadAll()">🔄 Refresh</button><button class="gray" onclick="logout()">Logout</button></div>
-<div class="tab"><button class="active" onclick="showTab('ads',this)">📢 Ads</button><button onclick="showTab('deposits',this)">💰 Deposits</button><button onclick="showTab('publishers',this)">🤖 Publishers</button><button onclick="showTab('withdrawals',this)">🏧 Withdrawals</button><button onclick="showTab('packages',this)">📦 Packages</button><button onclick="showTab('settings',this)">⚙️ Settings</button></div>
-<div id="tab-ads" class="card"><h3 style="margin:0">📢 Ads — Moderation</h3><p class="muted">Approve → Publish. Reject → auto refund.</p><div id="adsList"></div></div>
-<div id="tab-deposits" class="card" style="display:none"><h3 style="margin:0">💰 Deposits</h3><div id="depList"></div></div>
-<div id="tab-publishers" class="card" style="display:none"><h3 style="margin:0">🤖 Publishers</h3><div id="pubList"></div></div>
-<div id="tab-withdrawals" class="card" style="display:none"><h3 style="margin:0">🏧 Withdrawals — Min 10 USDT • Fee 10%</h3><div id="wdList"></div></div>
-<div id="tab-packages" class="card" style="display:none"><h3 style="margin:0">📦 Packages</h3><input id="pkgName" placeholder="Package name"><input id="pkgPlacement" placeholder="Placement"><input id="pkgPrice" type="number" placeholder="Price"><input id="pkgDays" type="number" placeholder="Duration days"><button onclick="addPkg()">+ Add Package</button><div id="pkgList"></div></div>
-<div id="tab-settings" class="card" style="display:none"><h3 style="margin:0">⚙️ Publish Deposit Addresses</h3><p class="muted">Wetin you put here, user go see for Deposit + QR go generate automatically.</p>
-<label style="font-size:12px">USDT TRC20 Address</label><input id="setTRC" placeholder="T...">
-<label style="font-size:12px">USDT ERC20 Address</label><input id="setERC" placeholder="0x...">
-<label style="font-size:12px">Publisher Reward Per View</label><input id="setReward" placeholder="0.005">
-<label style="font-size:12px">Support Username</label><input id="setSupport" placeholder="@support">
-<button onclick="saveSettings()">💾 Save & Publish Addresses</button>
-<div id="settingsPreview" style="margin-top:10px"></div></div>
-</div>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ADS PUBLISHER - Admin</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:#0B0E1A;color:white;font-family:Inter,sans-serif}.card{background:#1A1F36;border:1px solid #2A3452}input,select,textarea{background:#0B0E1A;border:1px solid #2A3452;padding:10px;border-radius:10px;width:100%;font-size:14px;color:white}</style></head>
+<body class="p-4 max-w-6xl mx-auto"><h1 class="text-2xl font-black">ADS PUBLISHER - ADMIN</h1>
+<div id="loginBox" class="card p-5 mt-4 max-w-sm"><p class="font-bold">Admin Login</p><input id="au" placeholder="Username" class="mt-3"><input id="ap" type="password" placeholder="Password" class="mt-2"><button onclick="login()" class="bg-[#8B7CF8] w-full mt-3 py-3 rounded-full font-bold">Login</button></div>
+<div id="dash" class="hidden">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4" id="stats"></div>
+<div class="flex gap-2 mt-4 flex-wrap">
+<button onclick="showSec('deposits')" class="bg-[#8B7CF8] px-4 py-2 rounded-full text-sm">Deposits</button>
+<button onclick="showSec('ads')" class="bg-[#8B7CF8] px-4 py-2 rounded-full text-sm">Moderation</button>
+<button onclick="showSec('publishers')" class="bg-[#FF8C00] px-4 py-2 rounded-full text-sm">Publishers - Pass Codes</button>
+<button onclick="showSec('users')" class="bg-[#8B7CF8] px-4 py-2 rounded-full text-sm">Users</button>
+<button onclick="showSec('packages')" class="bg-[#8B7CF8] px-4 py-2 rounded-full text-sm">Pricing</button>
+<button onclick="showSec('settings')" class="bg-[#10B981] px-4 py-2 rounded-full text-sm">Wallet & Settings</button>
+<button onclick="showSec('pubs')" class="bg-[#10B981] px-4 py-2 rounded-full text-sm">Publications</button>
+<button onclick="showSec('withdrawals')" class="bg-[#F59E0B] px-4 py-2 rounded-full text-sm">Withdrawals</button>
+</div><div id="content" class="mt-4 space-y-3"></div></div>
 <script>
-const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
-let token = localStorage.getItem('admin_token') || '';
-function headers(){ return {'Authorization':'Bearer '+token, 'Content-Type':'application/json'} }
-function showTab(id,btn){ ['ads','deposits','publishers','withdrawals','packages','settings'].forEach(x=> document.getElementById('tab-'+x).style.display = x===id?'block':'none'); document.querySelectorAll('.tab button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); if(id==='settings') loadSettings(); }
-function logout(){ localStorage.removeItem('admin_token'); token=''; document.getElementById('loginBox').style.display='block'; document.getElementById('dash').style.display='none'; }
-function clearAll(){ localStorage.removeItem('admin_token'); token=''; alert('Cleared. Now login again.'); logout(); }
-async function safeJson(res){ const txt = await res.text(); try{ return JSON.parse(txt); }catch{ throw new Error('Server returned HTML - redeploy'); } }
-async function login(){
-  const username=document.getElementById('username').value.trim(); const password=document.getElementById('password').value;
-  const r=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
-  const d=await safeJson(r).catch(e=>{ alert(e.message); return {}; });
-  if(!d.token) return alert(d.error||'Wrong login');
-  token=d.token; localStorage.setItem('admin_token',token);
-  document.getElementById('loginBox').style.display='none'; document.getElementById('dash').style.display='block'; loadAll();
+let token=localStorage.getItem('admin_token')||'';
+function ah(){ return {'Content-Type':'application/json','Authorization':'Bearer '+token}; }
+async function login(){ const res=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:document.getElementById('au').value,password:document.getElementById('ap').value})}); const d=await res.json(); if(d.ok){ token=d.token; localStorage.setItem('admin_token',token); document.getElementById('loginBox').classList.add('hidden'); document.getElementById('dash').classList.remove('hidden'); loadStats(); showSec('deposits'); } else alert(d.error); }
+async function loadStats(){ const r=await fetch('/api/admin/stats',{headers:ah()}); const s=await r.json(); document.getElementById('stats').innerHTML=Object.entries(s).map(([k,v])=> `<div class="card p-3 rounded-[16px]"><p class="text-[11px] text-gray-400">${k}</p><p class="text-xl font-black">${v}</p></div>`).join(''); }
+async function showSec(sec){
+  const c=document.getElementById('content');
+  if(sec==='deposits'){ const r=await fetch('/api/admin/deposits',{headers:ah()}); const list=await r.json(); c.innerHTML='<h2 class="font-bold text-lg">Deposits - Confirm / Reject</h2>'+list.map(d=> `<div class="card p-3 rounded-[16px]"><div class="flex justify-between"><b>#${d.id} - ${d.amount} USDT ${d.network}</b><span>${d.status}</span></div><p class="text-xs text-gray-400">User @${d.username||''} (${d.telegram_id}) | TX: <span class="break-all">${d.tx_hash}</span></p>${d.proof_path?`<a href="/${d.proof_path}" target="_blank" class="text-blue-400 text-xs">View Proof</a>`:''}${d.status==='Pending'?`<div class="flex gap-2 mt-2"><button onclick="depAction(${d.id},'confirm')" class="bg-green-600 px-4 py-2 rounded-full text-xs font-bold">Confirm - Credit Wallet</button><button onclick="depAction(${d.id},'reject')" class="bg-red-600 px-4 py-2 rounded-full text-xs font-bold">Reject</button></div>`:''}</div>`).join(''); }
+  if(sec==='ads'){ const r=await fetch('/api/admin/ads',{headers:ah()}); const list=await r.json(); c.innerHTML='<h2 class="font-bold text-lg">Moderation</h2>'+list.map(a=> `<div class="card p-3 rounded-[16px]"><div class="flex justify-between"><b>${a.title}</b><span class="text-xs bg-[#0B0E1A] px-2 py-1 rounded-full">${a.status}</span></div><p class="text-xs text-gray-400">${a.category} | ${a.placement} | $${a.price} | @${a.username||''}</p><p class="text-xs mt-1">${a.description||''}</p><a href="${a.destination_url}" target="_blank" class="text-blue-400 text-xs break-all">${a.destination_url}</a>${a.media_path?`<div><a href="/${a.media_path}" target="_blank" class="text-blue-400 text-xs">View Media</a></div>`:''}<div class="flex gap-2 mt-2 flex-wrap"><button onclick="adAction(${a.id},'approve')" class="bg-green-600 px-3 py-2 rounded-full text-xs">Approve</button><button onclick="adAction(${a.id},'reject')" class="bg-red-600 px-3 py-2 rounded-full text-xs">Reject + Refund</button><button onclick="adAction(${a.id},'publish')" class="bg-blue-600 px-3 py-2 rounded-full text-xs">Publish to Channel</button><button onclick="adAction(${a.id},'pause')" class="bg-yellow-600 px-3 py-2 rounded-full text-xs">Pause</button><button onclick="adAction(${a.id},'resume')" class="bg-green-600 px-3 py-2 rounded-full text-xs">Resume</button><button onclick="adAction(${a.id},'cancel')" class="bg-gray-600 px-3 py-2 rounded-full text-xs">Cancel</button></div></div>`).join(''); }
+  if(sec==='publishers'){
+    const r=await fetch('/api/admin/publishers',{headers:ah()}); const list=await r.json();
+    c.innerHTML='<h2 class="font-bold text-lg">Publishers - Approve Pass Codes</h2>'+list.map(p=> {
+      const views = p.total_views||0; const clicks = p.total_clicks||0; const earned = parseFloat(p.total_earned||0);
+      const cpm = views>0 ? (earned/views*1000).toFixed(2) : '0.00';
+      const cpc = clicks>0 ? (earned/clicks).toFixed(4) : '0.0000';
+      const ctr = views>0 ? (clicks/views*100).toFixed(2) : '0.00';
+      return `<div class="card p-3 rounded-[16px]"><div class="flex justify-between"><b>${p.bot_username} - <span class="text-orange-400">${p.pcode}</span></b><span>${p.status}</span></div>
+      <p class="text-xs">User @${p.username||''} | API ${p.api_key}</p>
+      <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+        <div class="bg-[#0B0E1A] p-2 rounded-xl"><p class="text-[10px] text-gray-400">VIEWS</p><p class="font-black">${views}</p></div>
+        <div class="bg-[#0B0E1A] p-2 rounded-xl"><p class="text-[10px] text-gray-400">CLICKS</p><p class="font-black">${clicks}</p></div>
+        <div class="bg-[#0B0E1A] p-2 rounded-xl"><p class="text-[10px] text-gray-400">EARNED</p><p class="font-black text-green-400">$${earned.toFixed(4)}</p></div>
+        <div class="bg-[#0B0E1A] p-2 rounded-xl"><p class="text-[10px] text-gray-400">CPM</p><p class="font-black text-yellow-400">$${cpm}</p></div>
+        <div class="bg-[#0B0E1A] p-2 rounded-xl"><p class="text-[10px] text-gray-400">CPC</p><p class="font-black text-blue-400">$${cpc}</p></div>
+        <div class="bg-[#0B0E1A] p-2 rounded-xl"><p class="text-[10px] text-gray-400">CTR</p><p class="font-black">${ctr}%</p></div>
+      </div>
+      <p class="text-xs break-all mt-2 bg-[#0B0E1A] p-2 rounded-lg">&lt;script src="${location.origin}/ads.js" data-pcode="${p.pcode}" data-api-key="${p.api_key}"&gt;&lt;/script&gt;</p>
+      <div class="flex gap-2 mt-2"><button onclick="pubAction(${p.id},'approve')" class="bg-green-600 px-3 py-2 rounded-full text-xs">Approve</button><button onclick="pubAction(${p.id},'reject')" class="bg-red-600 px-3 py-2 rounded-full text-xs">Reject</button><button onclick="pubAction(${p.id},'suspend')" class="bg-yellow-600 px-3 py-2 rounded-full text-xs">Suspend</button></div></div>`;
+    }).join('');
+  }
+  if(sec==='users'){ const r=await fetch('/api/admin/users',{headers:ah()}); const list=await r.json(); c.innerHTML='<h2 class="font-bold text-lg">Users</h2>'+list.map(u=> `<div class="card p-3 rounded-[16px] flex justify-between"><span>@${u.username||''} (${u.telegram_id}) - ${u.status}<br><span class="text-xs">Balance ${u.available||0} | Deposited ${u.total_deposited||0}</span></span><button onclick="suspendUser(${u.id})" class="bg-red-600 px-3 py-1 rounded-full text-xs">Suspend</button></div>`).join(''); }
+  if(sec==='packages'){ const r=await fetch('/api/admin/packages',{headers:ah()}); const list=await r.json(); c.innerHTML=`<h2 class="font-bold text-lg">Pricing</h2><div class="card p-3 rounded-[16px]"><input id="pn" placeholder="Name"><input id="pp" placeholder="Placement" class="mt-2"><input id="ppr" type="number" placeholder="Price USDT" class="mt-2"><input id="pd" type="number" placeholder="Duration days" class="mt-2"><button onclick="createPkg()" class="bg-[#8B7CF8] w-full mt-2 py-2 rounded-full font-bold">Create Package</button></div>`+list.map(p=> `<div class="card p-3 rounded-[16px] flex justify-between"><span>${p.name} - $${p.price} - ${p.duration_days}d - ${p.placement}</span><button onclick="delPkg(${p.id})" class="bg-red-600 px-3 py-1 rounded-full text-xs">Delete</button></div>`).join(''); }
+  if(sec==='settings'){ const r=await fetch('/api/admin/settings',{headers:ah()}); const list=await r.json(); const o={}; list.forEach(x=> o[x.key]=x.value); const per1000 = o.PUBLISHER_REWARD_PER_1000 || '5'; c.innerHTML=`<h2 class="font-bold text-lg">Wallet & Settings</h2><div class="card p-4 rounded-[16px] space-y-2"><label class="text-xs">USDT TRC20 Address</label><input id="sTRC" value="${o.USDT_TRC20||''}" placeholder="T..."><label class="text-xs">USDT ERC20 Address</label><input id="sERC" value="${o.USDT_ERC20||''}" placeholder="0x..."><label class="text-xs font-bold text-yellow-400">💰 Earning Per 1,000 Impressions (CPM) - ADMIN ONLY - Publisher NO go see am</label><input id="sPer1000" type="number" step="0.01" value="${per1000}"><p class="text-xs text-gray-400">Example: 5 = $5 per 1k views = $0.005 per view. 10 = $10 per 1k = $0.01 per view. This go auto calculate for publisher statistics as CPM / CPC / CTR.</p><p class="text-xs text-green-400" id="perViewHint">Per view now: $${(parseFloat(per1000||'5')/1000).toFixed(4)}</p><label class="text-xs">Support</label><input id="sSup" value="${o.SUPPORT_USERNAME||''}"><button onclick="saveSettings()" class="bg-[#10B981] w-full py-3 rounded-full font-bold">Save Settings</button></div>`;
+    document.getElementById('sPer1000').addEventListener('input', e=>{ const v=parseFloat(e.target.value||'0'); document.getElementById('perViewHint').innerText='Per view now: $'+(v/1000).toFixed(4); });
+  }
+  if(sec==='pubs'){ const r=await fetch('/api/admin/publications',{headers:ah()}); const list=await r.json(); c.innerHTML='<h2 class="font-bold text-lg">Publishing History</h2>'+list.map(p=> `<div class="card p-3 rounded-[16px] text-xs">${p.title} - ${p.channel} - Msg ${p.message_id} - ${p.published_at}</div>`).join(''); }
+  if(sec==='withdrawals'){ const r=await fetch('/api/admin/withdrawals',{headers:ah()}); const list=await r.json(); c.innerHTML='<h2 class="font-bold text-lg">Withdrawals</h2>'+list.map(w=> `<div class="card p-3 rounded-[16px]"><div class="flex justify-between"><b>#${w.id} - $${w.amount} (Fee $${w.fee} Receive $${w.net_amount})</b><span>${w.status}</span></div><p class="text-xs">@${w.username||''} | ${w.bot_username||''} | ${w.network} | <span class="break-all">${w.wallet_address}</span></p>${w.status==='Pending'?`<div class="flex gap-2 mt-2"><button onclick="wdAction(${w.id},'approve')" class="bg-green-600 px-3 py-2 rounded-full text-xs">Approve</button><button onclick="wdAction(${w.id},'paid')" class="bg-blue-600 px-3 py-2 rounded-full text-xs">Mark Paid</button><button onclick="wdAction(${w.id},'reject')" class="bg-red-600 px-3 py-2 rounded-full text-xs">Reject + Refund</button></div>`:''}</div>`).join(''); }
 }
-function badge(st){ if(st==='Approved' || st==='Paid' || st==='Confirmed') return '<span class="badge b-ok">'+st+'</span>'; if(st==='Rejected') return '<span class="badge b-red">'+st+'</span>'; if(st==='Published') return '<span class="badge b-blue">Published</span>'; return '<span class="badge b-pending">'+(st||'Pending')+'</span>'; }
-async function loadSettings(){
-  try{
-    const rows=await safeJson(await fetch('/api/admin/settings',{headers:headers()}));
-    const o={}; rows.forEach(r=>o[r.key]=r.value);
-    document.getElementById('setTRC').value=o.USDT_TRC20||'';
-    document.getElementById('setERC').value=o.USDT_ERC20||'';
-    document.getElementById('setReward').value=o.PUBLISHER_REWARD_PER_VIEW||'0.005';
-    document.getElementById('setSupport').value=o.SUPPORT_USERNAME||'';
-    document.getElementById('settingsPreview').innerHTML=`<div class="item">TRC20: <code>${o.USDT_TRC20||'—'}</code><br><img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(o.USDT_TRC20||'')}" style="width:120px;margin-top:6px"><br>ERC20: <code>${o.USDT_ERC20||'—'}</code><br><img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(o.USDT_ERC20||'')}" style="width:120px;margin-top:6px"></div>`;
-  }catch(e){}
-}
-async function saveSettings(){
-  const body={USDT_TRC20:document.getElementById('setTRC').value.trim(), USDT_ERC20:document.getElementById('setERC').value.trim(), PUBLISHER_REWARD_PER_VIEW:document.getElementById('setReward').value.trim(), SUPPORT_USERNAME:document.getElementById('setSupport').value.trim()};
-  const r=await fetch('/api/admin/settings',{method:'POST',headers:headers(),body:JSON.stringify(body)});
-  const d=await safeJson(r); alert(d.ok?'✅ Addresses Published! Users go see am + QR now':'Failed'); loadSettings();
-}
-async function loadAll(){
-  try{
-    const s=await safeJson(await fetch('/api/admin/stats',{headers:headers()})); if(s.error) throw new Error(s.error);
-    document.getElementById('stats').innerHTML=`<div><b>${s.totalUsers||0}</b>Users</div><div><b>${s.totalAds||0}</b>Ads</div><div><b>${s.pendingModeration||0}</b>Pending Ads</div><div><b>${s.pendingDeposits||0}</b>Pending Deposits</div><div><b>${s.pendingPublishers||0}</b>Pending Publishers</div><div><b>${s.pendingWithdrawals||0}</b>Pending Withdrawals</div><div><b>$${s.totalRevenue||0}</b>Revenue</div><div><b>${s.published||0}</b>Published</div>`;
-    const ads=await safeJson(await fetch('/api/admin/ads',{headers:headers()}));
-    document.getElementById('adsList').innerHTML=ads.map(a=>`<div class="item"><b>#${a.id} ${a.title}</b> - @${a.username||''}<br>$${a.price} | ${badge(a.status)} | ${a.placement||''} • ${a.category||''}<br><span class="muted">${a.destination_url||''}</span><br><button class="small" onclick="adAction(${a.id},'approve')">✅ Approve</button><button class="small blue" onclick="adAction(${a.id},'publish')">🚀 Publish</button><button class="small danger" onclick="adAction(${a.id},'reject')">❌ Reject + Refund</button></div>`).join('')||'No ads';
-    const deps=await safeJson(await fetch('/api/admin/deposits',{headers:headers()}));
-    document.getElementById('depList').innerHTML=deps.map(d=>`<div class="item"><b>#${d.id} ${d.amount} USDT ${d.network}</b> - @${d.username||''}<br>${badge(d.status)} | TX: <code>${d.tx_hash||''}</code><br>${d.status==='Pending'?`<button class="small" onclick="depAction(${d.id},'confirm')">✅ Confirm</button><button class="small danger" onclick="depAction(${d.id},'reject')">❌ Reject</button>`:''}</div>`).join('')||'No deposits';
-    const pubs=await safeJson(await fetch('/api/admin/publishers',{headers:headers()}));
-    document.getElementById('pubList').innerHTML=pubs.map(p=>{ const views=Number(p.total_views||0), clicks=Number(p.total_clicks||0), earned=Number(p.total_earned||0); const ctr=views>0?((clicks/views)*100).toFixed(1):'0.0'; return `<div class="item"><b>${p.bot_username}</b> - @${p.username||''} - ${badge(p.status)}<br>Pass: <code>${p.pcode}</code> • API: <code>${p.api_key||''}</code><br>📊 Impressions: ${views} • Clicks: ${clicks} • CTR: ${ctr}% • Earned: $${earned.toFixed(2)}<br>${p.status==='Pending'?`<button class="small" onclick="pubAction(${p.id},'approve')">✅ Approve</button><button class="small danger" onclick="pubAction(${p.id},'reject')">❌ Reject</button>`:''}${p.status==='Approved'?`<button class="small orange" onclick="pubAction(${p.id},'suspend')">⏸️ Suspend</button>`:''}</div>`; }).join('')||'No publishers';
-    let wds=[]; try{ wds = await safeJson(await fetch('/api/admin/withdrawals',{headers:headers()})); }catch(e){ wds=[]; }
-    document.getElementById('wdList').innerHTML = wds.length ? wds.map(w=>{ const amt=Number(w.amount||0), fee=Number(w.fee!==undefined?w.fee:amt*0.10), net=Number(w.net_amount!==undefined?w.net_amount:amt-fee); return `<div class="item"><b>#${w.id} $${amt} ${w.network||'TRC20'}</b> - @${w.username||''} • Bot: ${w.bot_username||''}<br>${badge(w.status)} • Fee $${fee.toFixed(2)} • <b>Send $${net.toFixed(2)}</b><br><span class="muted">Wallet: <code>${w.wallet_address||''}</code></span><br>${w.status==='Pending'?`<button class="small" onclick="wdAction(${w.id},'approve')">✅ Approve</button><button class="small danger" onclick="wdAction(${w.id},'reject')">❌ Reject + Refund</button>`:''}${w.status==='Approved'?`<button class="small blue" onclick="wdAction(${w.id},'paid')">💰 Mark as Paid</button>`:''}</div>`; }).join('') : 'No withdrawals yet';
-    try{ const pkgs = await safeJson(await fetch('/api/admin/packages',{headers:headers()})); document.getElementById('pkgList').innerHTML = pkgs.map(p=>`<div class="item"><b>${p.name}</b> — $${p.price} • ${p.placement} • ${p.duration_days} days • ${p.active?'Active':'Inactive'}<br><button class="small danger" onclick="delPkg(${p.id})">Delete</button></div>`).join('')||'No packages'; }catch(e){ document.getElementById('pkgList').innerHTML='Packages endpoint not ready'; }
-    loadSettings();
-  }catch(e){ alert('Login fail: '+e.message); logout(); }
-}
-async function adAction(id,action){ const r=await fetch(`/api/admin/ad/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({note:''})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
-async function depAction(id,action){ const r=await fetch(`/api/admin/deposit/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({note:''})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
-async function pubAction(id,action){ const r=await fetch(`/api/admin/publisher/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
-async function wdAction(id,action){ const r=await fetch(`/api/admin/withdrawal/${id}/${action}`,{method:'POST',headers:headers(),body:JSON.stringify({})}); const d=await safeJson(r); alert(d.ok?'Done':(d.error||'Failed')); loadAll(); }
-async function addPkg(){ const body={name:document.getElementById('pkgName').value, placement:document.getElementById('pkgPlacement').value, price:document.getElementById('pkgPrice').value, duration_days:document.getElementById('pkgDays').value}; const r=await fetch('/api/admin/packages',{method:'POST',headers:headers(),body:JSON.stringify(body)}); alert((await safeJson(r)).ok?'Package added':'Failed'); loadAll(); }
-async function delPkg(id){ if(!confirm('Delete package?')) return; const r=await fetch('/api/admin/packages/'+id,{method:'DELETE',headers:headers()}); alert((await safeJson(r)).ok?'Deleted':'Failed'); loadAll(); }
-if(token){ document.getElementById('loginBox').style.display='none'; document.getElementById('dash').style.display='block'; loadAll(); }
-</script>
-</body>
-</html>
+async function depAction(id,act){ await fetch(`/api/admin/deposit/${id}/${act}`,{method:'POST',headers:ah(),body:JSON.stringify({note:'Admin'})}); loadStats(); showSec('deposits'); }
+async function adAction(id,act){ await fetch(`/api/admin/ad/${id}/${act}`,{method:'POST',headers:ah(),body:JSON.stringify({note:'Admin'})}); loadStats(); showSec('ads'); }
+async function pubAction(id,act){ await fetch(`/api/admin/publisher/${id}/${act}`,{method:'POST',headers:ah()}); loadStats(); showSec('publishers'); }
+async function wdAction(id,act){ await fetch(`/api/admin/withdrawal/${id}/${act}`,{method:'POST',headers:ah()}); loadStats(); showSec('withdrawals'); }
+async function suspendUser(id){ await fetch(`/api/admin/user/${id}/suspend`,{method:'POST',headers:ah()}); showSec('users'); }
+async function createPkg(){ await fetch('/api/admin/packages',{method:'POST',headers:ah(),body:JSON.stringify({name:document.getElementById('pn').value,placement:document.getElementById('pp').value,price:parseFloat(document.getElementById('ppr').value),duration_days:parseInt(document.getElementById('pd').value)})}); showSec('packages'); }
+async function delPkg(id){ await fetch(`/api/admin/packages/${id}`,{method:'DELETE',headers:ah()}); showSec('packages'); }
+async function saveSettings(){ await fetch('/api/admin/settings',{method:'POST',headers:ah(),body:JSON.stringify({USDT_TRC20:document.getElementById('sTRC').value,USDT_ERC20:document.getElementById('sERC').value,PUBLISHER_REWARD_PER_1000:document.getElementById('sPer1000').value,SUPPORT_USERNAME:document.getElementById('sSup').value})}); alert('Saved - Earning per 1k updated'); loadStats(); }
+if(token){ document.getElementById('loginBox').classList.add('hidden'); document.getElementById('dash').classList.remove('hidden'); loadStats(); showSec('deposits'); }
+</script></body></html>

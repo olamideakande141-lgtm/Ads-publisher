@@ -7,52 +7,70 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://ads-publisher.onrender.com/ads.js" data-pcode="p1" data-api-key="AP-2118E216F03D"></script>
 <style>
-body{font-family:Arial,sans-serif;background:#f1f5f9;margin:0;padding:16px}
+body{font-family:Inter,Arial,sans-serif;background:#f1f5f9;margin:0;padding:16px;color:#0B0E1A}
 .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
 button{width:100%;padding:14px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-weight:800;font-size:15px;cursor:pointer}
 button:active{opacity:0.85}
-#adBox img,#adBox video{width:100%;border-radius:12px}
+button.gold{background:linear-gradient(90deg,#FFD700,#FFB800);color:#000}
 h2{margin:0 0 8px 0;font-size:18px}
 p{margin:0;color:#475569;font-size:14px;line-height:1.5}
+.badge{display:inline-block;background:#0B0E1A;color:#fff;font-size:11px;font-weight:800;padding:5px 10px;border-radius:20px}
+.success{background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;border-radius:12px;padding:12px;font-size:13px;font-weight:700;display:none}
+.muted{font-size:12px;color:#94A3B8;margin-top:8px;text-align:center}
+#miniSlot{margin-bottom:12px}
 </style>
 </head>
 <body>
-<div class="card" style="text-align:center"><h2>🎁 Watch Ad & Earn $0.005</h2><p>Ads from ADS PUBLISHER pool go show here automatically when Admin publishes.</p></div>
-<div class="card"><button onclick="showAd()">▶️ Show Ad Now</button></div>
-<div id="adBox" class="card" style="display:none"></div>
-<div id="status" class="card" style="display:none"></div>
+
+<div class="card" style="text-align:center">
+  <span class="badge">Sponsored • Ads Publisher</span>
+  <h2 style="margin-top:10px">🎁 Watch Sponsored Ad</h2>
+  <p>Real ads from ADS PUBLISHER pool go show here automatically when Admin approves and publishes.</p>
+  <p style="font-size:12px;color:#94A3B8;margin-top:8px">View must complete 15s to count as valid. No reward for just opening.</p>
+</div>
+
+<!-- MINI AD CARD - Small sponsored card inside page -->
+<div id="miniSlot"></div>
+
+<div class="card">
+  <button onclick="showAd()">▶️ Show Ad Now</button>
+  <button class="gold" onclick="showAd()" style="margin-top:10px">📺 View Sponsored Ad</button>
+</div>
+
+<div id="status" class="card success"></div>
+<p class="muted">Ads by Ads Publisher • Only approved & active ads are shown</p>
+
 <script>
 const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
-const PCODE = "p1";
-const API_KEY = "AP-2118E216F03D";
-const BASE = "https://ads-publisher.onrender.com";
+
+// Completion callback from ads.js - fires ONLY after 15s full view + backend verified
+window.onAdsPublisherComplete = function(data){
+  console.log('Ad completed:', data);
+  const st = document.getElementById('status');
+  st.style.display = 'block';
+  st.innerHTML = '✅ Thanks for viewing this sponsored ad.<br><span style="font-weight:400">Your view has been recorded and will be verified on the backend.</span>';
+};
+
+// Load Mini Ad card on page load
+window.addEventListener('load', function(){
+  if(typeof window.renderMiniAd === 'function'){
+    window.renderMiniAd('miniSlot');
+  }
+});
+
 async function showAd(){
-  try{
-    const res = await fetch(`${BASE}/api/publisher/ads?pcode=${PCODE}&api_key=${API_KEY}`);
-    const data = await res.json();
-    const ads = Array.isArray(data) ? data : (data.ads || data.items || []);
-    if(!ads.length){ alert("No ads available now"); return; }
-    const ad = ads[0];
-    const box = document.getElementById("adBox");
-    box.style.display = "block";
-    let media = "";
-    if(ad.media_url || ad.media_path){
-      const raw = ad.media_url || ad.media_path;
-      const url = raw.startsWith("http") ? raw : BASE + raw;
-      media = (ad.media_type && ad.media_type.includes("video")) ? `<video src="${url}" controls autoplay></video>` : `<img src="${url}">`;
-    }
-    box.innerHTML = `${media}<h3 style="margin:12px 0 6px">${ad.title || "Sponsored"}</h3><p>${ad.description || ""}</p><br><a href="${ad.destination_url || "#"}" target="_blank"><button type="button">👉 Visit Advertiser</button></a>`;
-    const viewer_id = String(tg.initDataUnsafe?.user?.id || "anon");
-    const rewardRes = await fetch(`${BASE}/api/publisher/view`, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ pcode: PCODE, api_key: API_KEY, ad_id: ad.id, viewer_id: viewer_id, request_id: "req_"+Date.now() })
-    });
-    const reward = await rewardRes.json();
-    const st = document.getElementById("status");
-    st.style.display = "block";
-    st.innerHTML = reward.ok ? `✅ You earned $${reward.rewarded} for this view!` : `Ad shown, reward: ${reward.error || ""}`;
-  }catch(e){ alert("Fetch fail: "+e.message); }
+  // DO NOT fetch /api/publisher/ads here and DO NOT call /api/publisher/view here.
+  // ads.js handles: fetch approved ads, show professional popup, 15s timer,
+  // VISIT AD, close button, view tracking after full view, dedupe.
+  if(typeof window.showPublisherAd !== 'function'){
+    alert('Ads Publisher SDK no load. Check ads.js script tag.');
+    return;
+  }
+  const result = await window.showPublisherAd();
+  if(result && !result.ok){
+    // ads.js already shows "No sponsored ads available" popup
+    console.log('No ad:', result.msg);
+  }
 }
 </script>
 </body>

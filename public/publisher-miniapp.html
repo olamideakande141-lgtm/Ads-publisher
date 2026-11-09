@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Watch Ad & Earn</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://ads-publisher.onrender.com/ads.js" data-pcode="p1" data-api-key="AP-2118E216F03D"></script>
+<script src="https://ads-publisher.onrender.com/sdk.js?id=p1"></script>
 <style>
 body{font-family:Inter,Arial,sans-serif;background:#f1f5f9;margin:0;padding:16px;color:#0B0E1A}
 .card{background:#fff;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
@@ -43,12 +43,12 @@ p{margin:0;color:#475569;font-size:14px;line-height:1.5}
 <script>
 const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 
-// Completion callback from ads.js - fires ONLY after 15s full view + backend verified
+// Completion callback from sdk.js - fires ONLY after 15s full view
 window.onAdsPublisherComplete = function(data){
   console.log('Ad completed:', data);
   const st = document.getElementById('status');
   st.style.display = 'block';
-  st.innerHTML = '✅ Thanks for viewing this sponsored ad.<br><span style="font-weight:400">Your view has been recorded and will be verified on the backend.</span>';
+  st.innerHTML = '✅ Thanks for viewing this sponsored ad.<br><span style="font-weight:400">Your view has been recorded and will be verified on the backend. No reward for just opening.</span>';
 };
 
 // Load Mini Ad card on page load
@@ -60,15 +60,17 @@ window.addEventListener('load', function(){
 
 async function showAd(){
   // DO NOT fetch /api/publisher/ads here and DO NOT call /api/publisher/view here.
-  // ads.js handles: fetch approved ads, show professional popup, 15s timer,
+  // sdk.js handles: fetch approved ads, show professional popup, 15s timer,
   // VISIT AD, close button, view tracking after full view, dedupe.
-  if(typeof window.showPublisherAd !== 'function'){
-    alert('Ads Publisher SDK no load. Check ads.js script tag.');
+  // Try new name first, fallback to old aliases
+  const fn = window.showAdsPublisher || window.showPublisherAd || window.showAdsPublisherAd;
+  if(typeof fn !== 'function'){
+    alert('Ads Publisher SDK no load. Check sdk.js script tag - must be sdk.js?id=p1');
     return;
   }
-  const result = await window.showPublisherAd();
+  const result = await fn();
   if(result && !result.ok){
-    // ads.js already shows "No sponsored ads available" popup
+    // sdk.js already shows "No sponsored ads available" popup
     console.log('No ad:', result.msg);
   }
 }

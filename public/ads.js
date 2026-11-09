@@ -1,4 +1,4 @@
-// ADS PUBLISHER SDK - ads.js - FULL FILE - TIMER + MANUAL CLOSE - public/ads.js
+// ADS PUBLISHER SDK - ads.js - FULL FINAL - NO AUTO CLOSE, NO REWARD TEXT - public/ads.js
 (function(){
   var script = document.currentScript;
   if(!script) script = document.querySelector('script[src*="ads.js"]');
@@ -31,7 +31,7 @@
         var old = document.getElementById('adsPublisherOverlay');
         if(old) old.remove();
 
-        // ===== PROFESSIONAL AD - NO AUTO CLOSE, NO EARN TEXT =====
+        // ===== PROFESSIONAL AD - NO REWARD, NO AUTO CLOSE, NO CLOSE & CLAIM =====
         const overlay = document.createElement("div");
         overlay.id = "adsPublisherOverlay";
         overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px";
@@ -47,7 +47,7 @@
 
         overlay.innerHTML = `
           <div style="background:#fff;border-radius:16px;padding:16px;max-width:420px;width:100%;text-align:center;color:#111;font-family:Arial;position:relative">
-            <button id="adsCloseX" disabled style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:0;background:#eee;color:#999;font-size:16px;font-weight:900;cursor:not-allowed;display:flex;align-items:center;justify-content:center">✕</button>
+            <button id="adsCloseX" disabled style="position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:0;background:#eee;color:#999;font-size:16px;font-weight:900;cursor:not-allowed;display:flex;align-items:center;justify-content:center;z-index:10">✕</button>
             <div style="display:flex;justify-content:space-between;align-items:center;padding-right:36px">
               <span style="background:#111;color:#fff;font-size:11px;padding:5px 10px;border-radius:20px;font-weight:700">Sponsored</span>
               <span id="adsTimerPill" style="background:#FFD700;color:#000;font-size:12px;padding:5px 12px;border-radius:20px;font-weight:900">Ad ends in ${AD_SECONDS}s</span>
@@ -69,10 +69,11 @@
         var timerPill = document.getElementById("adsTimerPill");
         var progressBar = document.getElementById("adsProgressBar");
         var canClose = false;
+        var timer = null;
 
         async function closeAd(){
-          if(!canClose) return; // block early close
-          clearInterval(timer);
+          if(!canClose) return; // block early close - must wait timer
+          if(timer) clearInterval(timer);
           overlay.remove();
           try{
             var viewer_id = 'anon';
@@ -83,14 +84,14 @@
                 viewer_id = localStorage.getItem('uid');
               }
             }catch(e){}
+            // Reward goes to PUBLISHER OWNER backend only - viewer NO see am
             await fetch(BASE + '/api/publisher/view', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ pcode: pcode, api_key: api_key, ad_id: ad.id, viewer_id: viewer_id })
             });
           }catch(e){}
-          // Reward still fires for bot owner for backend - viewer NO see amount
-          if(window.onAdsPublisherReward) window.onAdsPublisherReward({ ad_id: ad.id, reward: 0.005 });
+          if(window.onAdsPublisherReward) window.onAdsPublisherReward({ ad_id: ad.id });
           window.dispatchEvent(new CustomEvent('adsPublisherAd', { detail: ad }));
           resolve({ ok: true, ad: ad, request_id: "req_" + Date.now() });
         }
@@ -98,7 +99,8 @@
         closeX.onclick = closeAd;
 
         // ===== TIMER - NO AUTO CLOSE =====
-        var timer = setInterval(function(){
+        // Ad go STAY after timer. E NO go close by itself. User must press ✕
+        timer = setInterval(function(){
           remaining--;
           var elapsed = AD_SECONDS - remaining;
           var pct = Math.floor((elapsed / AD_SECONDS) * 100);
@@ -106,12 +108,12 @@
           if(remaining > 0){
             if(timerPill) timerPill.innerText = "Ad ends in " + remaining + "s";
           } else {
-            clearInterval(timer);
+            clearInterval(timer); // STOP timer, DO NOT AUTO CLOSE
             if(progressBar) progressBar.style.width = "100%";
             if(timerPill) timerPill.innerText = "You can close now";
             if(timerPill) timerPill.style.background = "#22c55e";
             if(timerPill) timerPill.style.color = "#fff";
-            // Enable Close X - user go close by himself, ad NO go close alone
+            // Enable ✕ only now - user go close by himself
             canClose = true;
             if(closeX){
               closeX.disabled = false;

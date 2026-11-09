@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ADS PUBLISHER</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://ads-publisher.onrender.com/sdk.js?id=p1"></script>
 <style>
 *{box-sizing:border-box}
 :root{--blue:#2563eb;--navy:#0f2043;--bg:#f1f5f9;--muted:#64748b;--line:#e2e8f0}
@@ -61,9 +62,30 @@ label{font-size:12px;font-weight:700;color:#334155;margin-top:10px;display:block
 .pubBox p{font-size:13px;opacity:.9}
 .codebox{background:#0f2043;color:#dbeafe;border-radius:12px;padding:12px;font-size:11px;white-space:pre-wrap;overflow:auto;max-height:320px}
 pre.code{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:8px 0 0}
+/* Professional Ad Preview */
+#adPreviewOverlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+#adPreviewInner{background:#fff;border-radius:20px;width:100%;max-width:420px;color:#0B0E1A;overflow:hidden;max-height:92vh;overflow-y:auto}
+.ap-head{display:flex;justify-content:space-between;align-items:center;padding:14px 14px 0}
+.ap-pill-sponsored{background:#0B0E1A;color:#fff;font-size:11px;font-weight:800;padding:6px 12px;border-radius:20px}
+.ap-pill-timer{background:#FFD700;color:#000;font-size:12px;font-weight:900;padding:6px 12px;border-radius:20px}
+.ap-pill-timer.done{background:#16A34A;color:#fff}
+.ap-close{width:32px;height:32px;border-radius:50%;border:0;background:#EDEDEF;color:#9CA3AF;font-size:16px;font-weight:900;cursor:not-allowed;margin-left:8px}
+.ap-close.enabled{background:#0B0E1A;color:#fff;cursor:pointer}
+.ap-progress{background:#EEE;height:6px;border-radius:10px;margin:12px 14px 0;overflow:hidden}
+.ap-progress-bar{background:linear-gradient(90deg,#FFD700,#FFB800);height:100%;width:0%;transition:width 1s linear}
+.ap-media{margin:14px 14px 0;border-radius:14px;overflow:hidden;background:#F3F4F6}
+.ap-media img,.ap-media video{width:100%;display:block;max-height:260px;object-fit:cover}
+.ap-body{padding:14px}
+.ap-brand{font-size:11px;font-weight:800;letter-spacing:1px;color:#6B7280;text-transform:uppercase}
+.ap-title{font-size:19px;font-weight:900;line-height:1.25;margin-top:4px}
+.ap-desc{font-size:13.5px;line-height:1.6;color:#4B5563;margin-top:8px}
+.ap-complete{background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;font-size:12px;font-weight:700;padding:10px 12px;border-radius:12px;margin:0 14px 12px;text-align:center;display:none}
+.ap-cta{display:block;background:linear-gradient(90deg,#FFD700,#FFB800);color:#000;padding:15px;border-radius:14px;font-weight:900;font-size:15px;text-align:center;text-decoration:none;margin:14px 14px 4px}
+.ap-footer{text-align:center;font-size:11px;color:#9CA3AF;padding:0 14px 14px}
 </style>
 </head>
 <body>
+<div id="adPreviewOverlay"><div id="adPreviewInner"></div></div>
 <div class="top"><div class="logo">A</div><div><h1>ADS PUBLISHER</h1><p id="welcome">Welcome back</p></div><div class="bell" onclick="showPage('notifications')">🔔</div><div class="avatar" id="avatar">U</div></div>
 <div class="wrap">
 <div id="page-home">
@@ -78,6 +100,7 @@ pre.code{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:8px 0 0
 <div class="card"><h2 style="margin:0">Promote Your Business</h2><p class="muted">Reach more people with ADS PUBLISHER.</p></div>
 <div id="catList"></div>
 <div class="card"><h3 style="margin:0">Create Advertisement</h3>
+<label>Brand / Business Name *</label><input id="adBrand" placeholder="e.g. Crypto Exchange Ltd / Your Brand">
 <label>Advertisement Title</label><input id="adTitle" placeholder="e.g. Best Crypto Exchange">
 <label>Advertisement Description</label><textarea id="adDesc" placeholder="Describe your offer..."></textarea>
 <label>Destination URL</label><input id="adUrl" placeholder="https://yourlink.com">
@@ -88,7 +111,9 @@ pre.code{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:8px 0 0
 <label>Upload Image or Video</label><input id="adMedia" type="file" accept="image/*,video/*">
 <div style="background:#eff6ff;border-radius:12px;padding:12px;margin-top:12px;display:flex;justify-content:space-between"><span>Total Price</span><b id="pkgPrice">$0.00</b></div>
 <p class="muted" id="pkgName">No package selected yet</p>
-<button class="btn btn-blue" style="margin-top:12px" onclick="createAd()">🚀 Submit Advertisement</button>
+<button class="btn btn-white" style="margin-top:12px" onclick="previewAd()">👁️ Preview Professional Ad</button>
+<button class="btn btn-blue" style="margin-top:8px" onclick="createAd()">🚀 Submit Advertisement</button>
+<p class="muted" style="text-align:center;margin-top:8px">Only approved & active ads will be shown to audiences. Rejected / paused / expired ads will not display.</p>
 </div>
 </div>
 <div id="page-deposit" class="hidden">
@@ -122,16 +147,17 @@ pre.code{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:8px 0 0
 <div class="stat"><span>📈 CTR</span><b id="statCTR">0%</b><small class="muted">Clicks / Views</small></div>
 </div>
 <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:10px;background:#f8fafc;border-radius:12px;padding:10px"><span>Withdrawable Balance</span><b id="statPendingBal">$0.00</b></div>
-<button class="btn btn-white" style="margin-top:10px" onclick="loadMe()">🔄 Refresh Statistics</button></div>
+<button class="btn btn-white" style="margin-top:10px" onclick="loadMe()">🔄 Refresh Statistics</button>
+<button class="btn btn-blue" style="margin-top:8px" onclick="testPublisherAd()">▶️ Test Professional Ad Popup</button></div>
 <div class="card"><h3 style="margin:0">📋 Per-Ad Performance</h3><div id="pubAdStats"></div></div>
 <div class="card"><h3 style="margin:0">Register Publisher Bot</h3><input id="pubBot" placeholder="@mybot"><input id="pubName" placeholder="Bot Name"><input id="pubUrl" placeholder="Mini App URL (optional)"><button class="btn btn-blue" style="margin-top:10px" onclick="regPublisher()">🤖 Register Publisher Bot</button></div>
 <div class="card"><h3 style="margin:0">My Publishers</h3><div id="pubList"></div></div>
-<div class="card"><h3 style="margin:0">💻 Bot Integration Code — Like Ads Galaxy</h3><p class="muted">Place Header for HEAD, Body where users should trigger an ad.</p>
+<div class="card"><h3 style="margin:0">💻 Bot Integration Code — Professional SDK</h3><p class="muted">Place Header for HEAD, Body where users should trigger an ad. Only approved & active ads will show.</p>
 <div style="background:#0f2043;color:#dbeafe;border-radius:14px;padding:12px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px;letter-spacing:1px">HEADER CODE</b><button class="btn btn-light" style="width:auto;padding:7px 10px;font-size:12px" onclick="copyTxt(document.getElementById('headerCode').textContent)">📋 Copy Header</button></div><pre id="headerCode" class="code">Waiting for approval...</pre></div>
 <div style="background:#0f2043;color:#dbeafe;border-radius:14px;padding:12px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px;letter-spacing:1px">BODY CODE</b><button class="btn btn-light" style="width:auto;padding:7px 10px;font-size:12px" onclick="copyTxt(document.getElementById('bodyCode').textContent)">📋 Copy Body</button></div><pre id="bodyCode" class="code">Waiting for approval...</pre></div>
 <div style="background:#0f2043;color:#dbeafe;border-radius:14px;padding:12px;margin-top:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12px;letter-spacing:1px">REWARD CALLBACK PAYLOAD</b><button class="btn btn-light" style="width:auto;padding:7px 10px;font-size:12px" onclick="copyTxt(document.getElementById('callbackCode').textContent)">📋 Copy Callback</button></div><pre id="callbackCode" class="code">Waiting for approval...</pre></div>
 <button class="btn btn-blue" style="margin-top:10px" onclick="copyPubCode()">📋 Copy All Bot Code</button><button class="btn btn-white" style="margin-top:8px" onclick="copyApiKey()">🔑 Copy API Key</button></div>
-<div class="card"><h3 style="margin:0">How to Earn</h3><p class="muted">1. Register bot → 2. Admin approve → 3. Copy Code → 4. Paste for your bot → 5. Earn per view → 6. Withdraw min 10 USDT</p></div>
+<div class="card"><h3 style="margin:0">How to Earn</h3><p class="muted">1. Register bot → 2. Admin approve → 3. Copy Code → 4. Paste for your bot → 5. Earn per valid view (15s) → 6. Withdraw min 10 USDT. No reward for just opening.</p></div>
 </div>
 <div id="page-moderation" class="hidden">
 <div class="card"><h2 style="margin:0">My Advertisements</h2><p class="muted">Track approval status.</p><div class="grid2" style="margin-top:10px"><div class="stat"><span>Total Submitted</span><b id="mTotal">0</b></div><div class="stat"><span>Pending</span><b id="mPending">0</b></div><div class="stat"><span>Approved</span><b id="mApproved">0</b></div><div class="stat"><span>Rejected</span><b id="mRejected">0</b></div></div><div style="display:flex;gap:8px;margin-top:12px"><button class="chip active" id="fAll" onclick="setFilter('all')">All</button><button class="chip" id="fPending" onclick="setFilter('pending')">Pending</button><button class="chip" id="fReviewed" onclick="setFilter('reviewed')">Reviewed</button></div></div>
@@ -168,9 +194,11 @@ pre.code{white-space:pre-wrap;word-break:break-all;font-size:11px;margin:8px 0 0
 <script>
 const tg=window.Telegram.WebApp; tg.ready(); tg.expand();
 let DATA=null, selectedPkg=null, selectedCat='Telegram Channel Promotion', depNet='TRC20', wdNet='TRC20', filter='all', readAll=false, CURRENT_PUB=null;
+let previewTimer=null, previewCanClose=false;
 const ADDR={TRC20:'TH9wG8jmmwuwnpZ85MAtJgCRj64kbhKCzd',ERC20:'0x2A57a12d46D4A7DE699473556bDc55caa99F0f0d'};
 const CATS=[{n:'Telegram Channel Promotion',d:'Promote in Telegram channels',i:'📢'},{n:'Telegram Bot Promotion',d:'Grow your Telegram bot',i:'🤖'},{n:'Mini App Promotion',d:'Drive users to your Mini App',i:'📱'},{n:'Website Promotion',d:'Send traffic to website',i:'🌐'},{n:'Business Promotion',d:'Grow your business',i:'🏢'},{n:'Image Advertisement',d:'Beautiful image ads',i:'🖼️'},{n:'Video Advertisement',d:'Engaging video ads',i:'🎬'},{n:'Product Promotion',d:'Sell your product faster',i:'🛍️'}];
 function copyTxt(t){ try{navigator.clipboard.writeText(t);}catch(e){} alert('Copied: '+t); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function showPage(p){
   ['home','advertise','deposit','withdraw','moderation','account','notifications','publisher'].forEach(x=> document.getElementById('page-'+x).classList.toggle('hidden',x!==p));
   document.querySelectorAll('.bottom button').forEach(b=>b.classList.remove('active'));
@@ -206,9 +234,9 @@ function renderMod(){
   const ads=DATA?.ads||[]; let list=ads;
   if(filter==='pending') list=ads.filter(a=>a.status==='Awaiting Moderation');
   if(filter==='reviewed') list=ads.filter(a=>a.status!=='Awaiting Moderation');
-  document.getElementById('modList').innerHTML=list.length? list.map(a=>`<div class="item" onclick="openDetail(${a.id})"><div style="display:flex;gap:10px"><div style="width:64px;height:64px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:28px">📢</div><div style="flex:1"><b>${a.title}</b><br><span class="muted">${a.category||'General'} • ${a.created_at?new Date(a.created_at).toLocaleDateString():'—'}</span><br><span class="muted">Paid: $${a.price}</span><br>${badgeFor(a.status)}${a.status==='Rejected'?'<br><span style="font-size:12px;color:#991b1b">Reason: '+(a.moderation_note||'Does not meet policy')+'</span>':''}</div></div></div>`).join('') : `<div class="card" style="text-align:center"><b>No advertisements yet.</b><p class="muted">Create your first advertisement and track its approval here.</p><button class="btn btn-blue" onclick="showPage('advertise')">Create Advertisement</button></div>`;
+  document.getElementById('modList').innerHTML=list.length? list.map(a=>`<div class="item" onclick="openDetail(${a.id})"><div style="display:flex;gap:10px"><div style="width:64px;height:64px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:28px">📢</div><div style="flex:1"><b>${a.title}</b><br><span class="muted">${a.brand||a.business_name||''} • ${a.category||'General'} • ${a.created_at?new Date(a.created_at).toLocaleDateString():'—'}</span><br><span class="muted">Paid: $${a.price}</span><br>${badgeFor(a.status)}${a.status==='Rejected'?'<br><span style="font-size:12px;color:#991b1b">Reason: '+(a.moderation_note||'Does not meet policy')+'</span>':''}</div></div></div>`).join('') : `<div class="card" style="text-align:center"><b>No advertisements yet.</b><p class="muted">Create your first advertisement and track its approval here.</p><button class="btn btn-blue" onclick="showPage('advertise')">Create Advertisement</button></div>`;
 }
-function openDetail(id){ const a=(DATA?.ads||[]).find(x=>x.id==id); if(!a) return; document.getElementById('detailContent').innerHTML=`<div style="text-align:center;padding:16px;background:#eff6ff;border-radius:16px;margin-top:12px;font-size:40px">📢</div><h2>${a.title}</h2><p class="muted">${a.description||''}</p><div class="card"><p><b>Category:</b> ${a.category||''}</p><p><b>Payment:</b> $${a.price}</p><p><b>Submission Date:</b> ${a.created_at||'—'}</p><p><b>Approval Status:</b> ${badgeFor(a.status)}</p><p><b>Publication Status:</b> ${a.status==='Published'?'Published':'Not Published'}</p><p><b>Duration:</b> ${a.duration_days||'—'} days</p><p><b>Destination:</b> <a href="${a.destination_url}">${a.destination_url}</a></p></div>`; document.getElementById('detailModal').classList.remove('hidden'); }
+function openDetail(id){ const a=(DATA?.ads||[]).find(x=>x.id==id); if(!a) return; document.getElementById('detailContent').innerHTML=`<div style="text-align:center;padding:16px;background:#eff6ff;border-radius:16px;margin-top:12px;font-size:40px">📢</div><h2>${a.title}</h2><p class="muted">${a.brand||a.business_name||''}</p><p class="muted">${a.description||''}</p><div class="card"><p><b>Brand:</b> ${a.brand||a.business_name||'—'}</p><p><b>Category:</b> ${a.category||''}</p><p><b>Payment:</b> $${a.price}</p><p><b>Submission Date:</b> ${a.created_at||'—'}</p><p><b>Approval Status:</b> ${badgeFor(a.status)}</p><p><b>Publication Status:</b> ${a.status==='Published'?'Published':'Not Published'}</p><p><b>Duration:</b> ${a.duration_days||'—'} days</p><p><b>Destination:</b> <a href="${a.destination_url}">${a.destination_url}</a></p></div><button class="btn btn-white" onclick="previewAdFromData(${a.id})">👁️ Preview Professional Ad</button>`; document.getElementById('detailModal').classList.remove('hidden'); }
 function closeDetail(){ document.getElementById('detailModal').classList.add('hidden'); }
 function markRead(){ readAll=true; renderNotif(); alert('All notifications marked as read'); }
 function renderNotif(){ const n=[]; (DATA?.deposits||[]).forEach(d=> n.push({t:'Deposit '+d.status,d:`${d.amount} USDT ${d.network} • TX ${d.tx_hash}`,date:d.created_at||'',ic:'💰'})); (DATA?.ads||[]).forEach(a=> n.push({t:'Advertisement '+a.status,d:`${a.title} • $${a.price}`,date:a.created_at||'',ic:'📢'})); if(!n.length) n.push({t:'Welcome to ADS PUBLISHER',d:'Deposit and create your first ad.',date:'',ic:'👋'}); document.getElementById('notifList').innerHTML=n.map(x=>`<div class="list"><div class="ic">${x.ic}</div><div><b>${x.t}</b><p>${x.d}</p><p>${x.date||''}</p></div>${readAll?'':'<span class="dot"></span>'}</div>`).join(''); }
@@ -222,17 +250,83 @@ async function loadDepositAddresses(){
     const hE=document.getElementById('homeERC'); if(hE){ hE.textContent=erc; document.getElementById('homeERC_QR').src='https://api.qrserver.com/v1/create-qr-code/?size=140x140&data='+encodeURIComponent(erc); }
   }catch(e){}
 }
+// ===== PROFESSIONAL AD PREVIEW - Same layout as sdk.js =====
+function showPreviewPopup(brand, title, desc, dest, mediaUrl, isVideo){
+  previewCanClose=false;
+  if(previewTimer) clearInterval(previewTimer);
+  var mediaHtml='';
+  if(mediaUrl){
+    if(isVideo) mediaHtml='<div class="ap-media"><video src="'+mediaUrl+'" controls autoplay muted playsinline loop></video></div>';
+    else mediaHtml='<div class="ap-media"><img src="'+mediaUrl+'" onerror="this.parentElement.style.display=\'none\'"/></div>';
+  }
+  document.getElementById('adPreviewInner').innerHTML =
+    '<div class="ap-head"><span class="ap-pill-sponsored">Sponsored</span><span style="display:flex;align-items:center"><span id="previewTimer" class="ap-pill-timer">Ad ends in 15s</span><button id="previewClose" disabled class="ap-close">✕</button></span></div>'
+    + '<div class="ap-progress"><div id="previewBar" class="ap-progress-bar"></div></div>'
+    + mediaHtml
+    + '<div class="ap-body"><div class="ap-brand">'+escapeHtml(brand||'Your Brand')+'</div><div class="ap-title">'+escapeHtml(title||'Your Ad Title')+'</div><div class="ap-desc">'+escapeHtml(desc||'Your ad description will appear here.')+'</div></div>'
+    + '<div id="previewComplete" class="ap-complete">✅ Thanks for viewing this sponsored ad. You can close now.</div>'
+    + '<a href="'+escapeHtml(dest||'#')+'" target="_blank" class="ap-cta">👉 VISIT AD</a>'
+    + '<div class="ap-footer">Ads by Ads Publisher</div>';
+  document.getElementById('adPreviewOverlay').style.display='flex';
+  var closeBtn=document.getElementById('previewClose');
+  closeBtn.onclick=function(){ if(previewCanClose) closePreview(); };
+  var remaining=15;
+  previewTimer=setInterval(function(){
+    remaining--;
+    var bar=document.getElementById('previewBar'); if(bar) bar.style.width=Math.floor(((15-remaining)/15)*100)+'%';
+    var pill=document.getElementById('previewTimer');
+    if(remaining>0){ if(pill) pill.textContent='Ad ends in '+remaining+'s'; }
+    else {
+      clearInterval(previewTimer);
+      if(bar) bar.style.width='100%';
+      if(pill){ pill.textContent='You can close now'; pill.classList.add('done'); }
+      var comp=document.getElementById('previewComplete'); if(comp) comp.style.display='block';
+      previewCanClose=true;
+      if(closeBtn){ closeBtn.disabled=false; closeBtn.classList.add('enabled'); }
+    }
+  },1000);
+}
+function closePreview(){ if(!previewCanClose) return; if(previewTimer) clearInterval(previewTimer); document.getElementById('adPreviewOverlay').style.display='none'; }
+function previewAd(){
+  var brand=document.getElementById('adBrand').value.trim();
+  var title=document.getElementById('adTitle').value.trim();
+  var desc=document.getElementById('adDesc').value.trim();
+  var dest=document.getElementById('adUrl').value.trim();
+  if(!brand) return alert('Enter Brand / Business Name first');
+  if(!title) return alert('Enter Advertisement Title first');
+  var file=document.getElementById('adMedia').files[0];
+  var mediaUrl='', isVideo=false;
+  if(file){ mediaUrl=URL.createObjectURL(file); isVideo=file.type.startsWith('video'); }
+  showPreviewPopup(brand, title, desc, dest, mediaUrl, isVideo);
+}
+function previewAdFromData(id){
+  var a=(DATA?.ads||[]).find(x=>x.id==id); if(!a) return;
+  closeDetail();
+  var mediaUrl = a.media_path ? (a.media_path.startsWith('http') ? a.media_path : window.location.origin + a.media_path) : '';
+  var isVideo = a.media_type==='video' || (mediaUrl && mediaUrl.includes('.mp4'));
+  showPreviewPopup(a.brand||a.business_name||'Sponsored', a.title, a.description, a.destination_url, mediaUrl, isVideo);
+}
+async function testPublisherAd(){
+  if(typeof window.showAdsPublisher !== 'function'){
+    alert('SDK no load. Check sdk.js is included.');
+    return;
+  }
+  try{
+    var r = await window.showAdsPublisher();
+    if(r && !r.ok) alert(r.msg || 'No ads available');
+  }catch(e){ alert('Ad error: '+e.message); }
+}
 function renderPubCodes(){
   const base=window.location.origin;
   const pcode=CURRENT_PUB?.pcode||'pXXX';
   const key=CURRENT_PUB?.api_key||'YOUR_API_KEY';
-  const h=document.getElementById('headerCode'); if(h) h.textContent=`<script src="${base}/ads.js" data-pcode="${pcode}" data-api-key="${key}"><\/script>`;
-  const b=document.getElementById('bodyCode'); if(b) b.textContent=`// Place the body code where users should trigger an ad.\nwindow.showAdsPublisher();\n\n// Optional robust handling:\nwindow.showAdsPublisher()\n.then(function(result){\n  // Send result.request_id to your backend\n  // Do not credit a valuable wallet here\n})\n.catch(function(error){\n  console.log(error.code, error.message)\n});`;
-  const c=document.getElementById('callbackCode'); if(c) c.textContent=`{\n  "pcode": "${pcode}",\n  "api_key": "${key}",\n  "ad_id": 123,\n  "viewer_id": "USER_TELEGRAM_ID",\n  "request_id": "req_abc123",\n  "reward": 0.005\n}\n\n// POST to: ${base}/api/publisher/view\n// Body: {api_key, pcode, ad_id, viewer_id}`;
+  const h=document.getElementById('headerCode'); if(h) h.textContent=`<script src="${base}/sdk.js?id=${pcode}"><\/script>`;
+  const b=document.getElementById('bodyCode'); if(b) b.textContent=`// Place where users should trigger an ad - Professional Popup\nwindow.showAdsPublisher()\n  .then(function(result){\n    // result = {ok, ad} - Send result.ad.id + viewer_id to YOUR backend\n    // Do NOT credit wallet here - backend must verify 15s + dedupe\n  })\n  .catch(function(error){\n    console.log(error.code, error.message);\n  });\n\n// Mini Card:\n// window.renderMiniAd('my-ad-slot');`;
+  const c=document.getElementById('callbackCode'); if(c) c.textContent=`{\n  "pcode": "${pcode}",\n  "api_key": "${key}",\n  "ad_id": 123,\n  "viewer_id": "USER_TELEGRAM_ID",\n  "request_id": "req_abc123",\n  "event_id": "evt_abc123",\n  "status": "completed"\n}\n\n// POST to: ${base}/api/publisher/view\n// Body: {api_key, pcode, ad_id, viewer_id, request_id, event_id}\n// Backend: verify duplicate + 15s + approved/active, then credit PUBLISHER.\n// Do NOT credit viewer for just opening.`;
 }
 function getPubCode(){
   const base=window.location.origin;
-  return `# ADS PUBLISHER - HEADER + BODY\n# HEADER (put in <head>):\n# <script src="${base}/ads.js" data-pcode="${CURRENT_PUB?.pcode||''}" data-api-key="${CURRENT_PUB?.api_key||''}"><\\/script>\n# BODY (where user triggers ad):\n# window.showAdsPublisher()\n# REWARD CALLBACK: POST ${base}/api/publisher/view {api_key, pcode, ad_id, viewer_id}\n`;
+  return `# ADS PUBLISHER - PROFESSIONAL SDK\n# HEADER (put in <head>):\n# <script src="${base}/sdk.js?id=${CURRENT_PUB?.pcode||''}"><\\/script>\n# BODY (where user triggers ad):\n# window.showAdsPublisher().then(r=>{ /* backend verify */ }).catch(e=>console.log(e))\n# MINI CARD: window.renderMiniAd('my-ad-slot')\n# REWARD CALLBACK: POST ${base}/api/publisher/view {api_key, pcode, ad_id, viewer_id, request_id, event_id}\n`;
 }
 function copyPubCode(){ copyTxt(getPubCode()); }
 function copyApiKey(){ if(CURRENT_PUB){ copyTxt(CURRENT_PUB.api_key||''); } else alert('No publisher yet'); }
@@ -312,21 +406,23 @@ async function doDeposit(){
 }
 async function createAd(){
   if(!selectedPkg) return alert('Select a package first');
+  const brand=document.getElementById('adBrand').value.trim();
   const title=document.getElementById('adTitle').value.trim();
   const url=document.getElementById('adUrl').value.trim();
+  if(!brand) return alert('Enter Brand / Business Name');
   if(!title) return alert('Enter Advertisement Title');
   if(!url) return alert('Enter Destination URL e.g. https://yourlink.com');
-  const fd=new FormData(); fd.append('title',title); fd.append('description',document.getElementById('adDesc').value); fd.append('destination_url',url); fd.append('category',document.getElementById('adCat').value); fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
-  const f=document.getElementById('adMedia').files[0]; if(f) fd.append('media',f);
+  const fd=new FormData(); fd.append('brand',brand); fd.append('brand_name',brand); fd.append('business_name',brand); fd.append('title',title); fd.append('description',document.getElementById('adDesc').value); fd.append('destination_url',url); fd.append('category',document.getElementById('adCat').value); fd.append('placement',document.getElementById('adPlacement').value); fd.append('package_id',selectedPkg);
+  const f=document.getElementById('adMedia').files[0]; if(f){ fd.append('media',f); fd.append('media_type', f.type.startsWith('video') ? 'video' : 'image'); }
   try{
     const r=await fetch('/api/advertisement',{method:'POST',headers:fdHdrs(),body:fd});
     const txt=await r.text(); let d={}; try{ d=JSON.parse(txt); }catch{ return alert('SERVER ERROR '+r.status+': '+txt.slice(0,200)); }
     if(d.ok){
       alert('✅ Your advertisement has been submitted successfully and is awaiting moderation.');
       const priceTxt=document.getElementById('pkgPrice').textContent||'$0'; const list=document.getElementById('modList'); const item=document.createElement('div'); item.className='item';
-      item.innerHTML=`<div style="display:flex;gap:10px"><div style="width:64px;height:64px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:28px">📢</div><div style="flex:1"><b>${title}</b><br><span class="muted">${document.getElementById('adCat').value} • Just now</span><br><span class="muted">Paid: ${priceTxt}</span><br><span class="badge b-pending">🟠 Pending Moderation</span></div></div>`;
+      item.innerHTML=`<div style="display:flex;gap:10px"><div style="width:64px;height:64px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:28px">📢</div><div style="flex:1"><b>${title}</b><br><span class="muted">${brand} • ${document.getElementById('adCat').value} • Just now</span><br><span class="muted">Paid: ${priceTxt}</span><br><span class="badge b-pending">🟠 Pending Moderation</span></div></div>`;
       if(list) list.prepend(item);
-      document.getElementById('adTitle').value=''; document.getElementById('adDesc').value=''; document.getElementById('adUrl').value=''; document.getElementById('adMedia').value='';
+      document.getElementById('adBrand').value=''; document.getElementById('adTitle').value=''; document.getElementById('adDesc').value=''; document.getElementById('adUrl').value=''; document.getElementById('adMedia').value='';
       loadMe(); showPage('moderation');
     } else alert('❌ '+(d.error||'Failed')+' | Status: '+r.status);
   }catch(e){ alert('❌ FETCH FAILED: '+e.message); }
